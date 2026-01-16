@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from x_analysis.sentiment_analysis import SentimentAnalysis
+from analysis.sentiment_analysis import SentimentAnalysis
 
 # 创建独立的 FastAPI 应用
 # root_path 用于支持通过 /aktools/ 前缀访问时 Swagger UI 正常工作
