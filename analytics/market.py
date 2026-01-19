@@ -9,21 +9,9 @@ Desc: 市场概览分析工具
 import akshare as ak
 import pandas as pd
 from datetime import datetime
-from typing import Dict, Any
-
-
-#!/usr/bin/env python
-# -*- coding:utf-8 -*-
-"""
-Date: 2026/01/15
-Desc: 市场概览分析工具
-提供市场整体情况的快速分析
-"""
-
-import akshare as ak
-import pandas as pd
-from datetime import datetime
 from typing import Dict, Any, List
+
+from .cache import cached
 
 
 class MarketAnalysis:
@@ -83,12 +71,16 @@ class MarketAnalysis:
         return summary
 
     @staticmethod
+    @cached("market:overview", ttl=60, stale_ttl=120)
     def get_market_overview_v2() -> Dict[str, Any]:
         """
         获取市场综合概览 (API 专用)
         包含：主要指数、上涨下跌家数、两市成交额
+        
+        缓存: 60秒 TTL + 120秒 Stale
         """
         result = {
+            "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "indices": [],
             "stats": {},
             "volume_str": "--"
@@ -135,8 +127,13 @@ class MarketAnalysis:
         return result
 
     @staticmethod
+    @cached("market:sector_top", ttl=180, stale_ttl=300)
     def get_sector_top(n: int = 5) -> List[Dict]:
-        """获取领涨行业"""
+        """
+        获取领涨行业
+        
+        缓存: 180秒 TTL + 300秒 Stale
+        """
         try:
             df = ak.stock_board_industry_name_em()
             if "涨跌幅" in df.columns:
@@ -147,20 +144,51 @@ class MarketAnalysis:
             return []
 
     @staticmethod
+    @cached("market:sector_bottom", ttl=300, stale_ttl=600)
     def get_sector_bottom(n: int = 5) -> List[Dict]:
-        """获取领跌行业"""
+        """
+        获取领跌行业 (并获取该行业内跌幅最大的股票)
+        
+        缓存: 300秒 TTL + 600秒 Stale (因为需要多次请求，缓存时间设长一点)
+        """
         try:
             df = ak.stock_board_industry_name_em()
             if "涨跌幅" in df.columns:
-                df = df.sort_values("涨跌幅", ascending=True).head(n)
+                # 获取跌幅榜前 N
+                df_bottom = df.sort_values("涨跌幅", ascending=True).head(n)
                 
-            # 注意：跌幅榜通常也显示领涨股票，或者显示最大跌幅股票？
-            # 东方财富接口返回的是 "领涨股票"，即使板块下跌，这里显示的也是该板块内涨幅最大的（或跌幅最小的）。
-            # 暂时保持原样，显示该板块目前的领头羊。
-            return df[["板块名称", "涨跌幅", "领涨股票", "领涨股票-涨跌幅"]].to_dict("records")
-        except Exception:
+                results = []
+                for _, row in df_bottom.iterrows():
+                    item = {
+                        "板块名称": row["板块名称"],
+                        "涨跌幅": row["涨跌幅"],
+                        # 默认先用领涨的垫底（万一获取成分股失败）
+                        "领涨股票": row["领涨股票"], 
+                        "领涨股票-涨跌幅": row["领涨股票-涨跌幅"]
+                    }
+                    
+                    # 尝试获取该板块成分股以找到领跌股
+                    try:
+                        board_code = row["板块代码"]
+                        # 获取板块成分股
+                        cons = ak.stock_board_industry_cons_em(symbol=board_code)
+                        if not cons.empty and "涨跌幅" in cons.columns:
+                            # 找跌得最惨的
+                            worst_stock = cons.sort_values("涨跌幅", ascending=True).iloc[0]
+                            item["领涨股票"] = worst_stock["名称"]
+                            item["领涨股票-涨跌幅"] = worst_stock["涨跌幅"]
+                    except Exception as e:
+                        print(f"获取板块成分股失败 [{row['板块名称']}]: {e}")
+                        
+                    results.append(item)
+                
+                return results
+                
             return []
+        except Exception as e:
+            print(f"获取领跌行业失败: {e}")
+            return []
+
 
 if __name__ == "__main__":
     print(MarketAnalysis.get_market_overview_v2())
-

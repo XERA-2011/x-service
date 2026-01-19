@@ -146,36 +146,30 @@ class IndexAnalysis:
     @staticmethod
     def compare_indices() -> pd.DataFrame:
         """
-        对比主要指数表现
+        对比主要指数表现 (使用实时行情)
         
         Returns:
             pd.DataFrame: 对比结果
         """
-        results = []
-        
-        for symbol, name in MAJOR_INDICES.items():
-            try:
-                analyzer = IndexAnalysis(symbol)
-                report = analyzer.analyze()
-                
-                row = {
-                    "指数名称": name,
-                    "最新点位": report.get("最新收盘", "-"),
-                }
-                
-                if "收益率" in report:
-                    row.update({
-                        "1日涨跌": report["收益率"].get("1日", "-"),
-                        "5日涨跌": report["收益率"].get("5日", "-"),
-                        "20日涨跌": report["收益率"].get("20日", "-"),
-                        "60日涨跌": report["收益率"].get("60日", "-"),
-                    })
-                
-                results.append(row)
-            except Exception as e:
-                print(f"获取 {name} 失败: {e}")
-        
-        return pd.DataFrame(results)
+        try:
+            # 获取实时行情
+            df = ak.stock_zh_index_spot_em(symbol="沪深重要指数")
+            
+            # 筛选我们关注的指数
+            target_indices = ["上证指数", "深证成指", "创业板指", "沪深300", "上证50", "中证500", "科创50"]
+            
+            # 过滤并保留需要的列
+            result_df = df[df["名称"].isin(target_indices)][["名称", "最新价", "涨跌幅"]]
+            result_df.columns = ["指数名称", "最新点位", "1日涨跌"]
+            
+            # 转换格式: 1日涨跌改为百分比字符串
+            result_df["1日涨跌"] = result_df["1日涨跌"].apply(lambda x: f"{x:+.2f}%")
+            
+            return result_df
+            
+        except Exception as e:
+            print(f"获取指数对比失败: {e}")
+            return pd.DataFrame()
 
 
 def demo():

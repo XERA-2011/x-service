@@ -1,7 +1,7 @@
 # ========================================
 # 阶段1: 构建依赖 (Builder)
 # ========================================
-FROM python:3.9-slim as builder
+FROM python:3.9-slim AS builder
 
 WORKDIR /build
 

@@ -124,8 +124,9 @@ async function loadFearGreedIndex() {
 }
 
 // ============================================
-// 北向资金
+// 北向资金 (预留)
 // ============================================
+
 // ============================================
 // 市场概览
 // ============================================
@@ -220,18 +221,84 @@ async function loadSectorBottom() {
         const data = await fetchAPI('/market/sector-bottom?n=5');
         if (!data || data.length === 0) throw new Error('无数据');
 
-        el.innerHTML = data.map(item => `
+        el.innerHTML = data.map(item => {
+            const stockChange = item['领涨股票-涨跌幅'];
+            const stockColor = stockChange >= 0 ? '#ff3333' : '#33ff33';
+            const stockSign = stockChange > 0 ? '+' : '';
+
+            return `
             <div class="qvix-item">
                 <div class="qvix-name">${item['板块名称']}</div>
                 <div class="qvix-value" style="color: #33ff33">${item['涨跌幅'].toFixed(2)}%</div>
                 <div style="font-size: 0.8rem; color: #666;">
-                    ${item['领涨股票']} <span style="color: #ff3333">+${item['领涨股票-涨跌幅'].toFixed(2)}%</span>
+                    ${item['领涨股票']} <span style="color: ${stockColor}">${stockSign}${stockChange.toFixed(2)}%</span>
                 </div>
+            </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('加载板块数据失败:', err);
+        el.innerHTML = '<div class="loading">加载失败</div>';
+    }
+}
+
+// ============================================
+// 指数对比
+// ============================================
+async function loadIndexCompare() {
+    const el = document.getElementById('index-list');
+
+    try {
+        const data = await fetchAPI('/index/compare');
+        if (!data || data.length === 0) throw new Error('无数据');
+
+        el.innerHTML = data.map(item => {
+            // 解析涨跌幅字符串 "x.xx%" -> float
+            let change = 0;
+            if (item['1日涨跌'] && item['1日涨跌'] !== '-') {
+                change = parseFloat(item['1日涨跌'].replace('%', ''));
+            }
+            const color = change > 0 ? '#ff3333' : (change < 0 ? '#33ff33' : '#888');
+
+            return `
+            <div class="qvix-item">
+                <div class="qvix-name">${item['指数名称']}</div>
+                <div class="qvix-value" style="font-size: 1rem;">${item['最新点位']}</div>
+                <div style="font-size: 0.9rem; color: ${color}; font-weight: bold;">
+                    ${item['1日涨跌']}
+                </div>
+            </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('加载指数对比失败:', err);
+        el.innerHTML = '<div class="loading">加载失败</div>';
+    }
+}
+
+// ============================================
+// 基金排行
+// ============================================
+async function loadFundTop() {
+    const el = document.getElementById('fund-list');
+
+    try {
+        const data = await fetchAPI('/fund/top?n=10');
+        if (!data || data.length === 0) throw new Error('无数据');
+
+        el.innerHTML = data.map(item => `
+            <div class="qvix-item">
+                <div class="qvix-name" style="flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 10px;">
+                    ${item['基金简称']} <span style="font-size: 0.8rem; color: #666;">(${item['基金代码']})</span>
+                </div>
+                <div class="qvix-value" style="color: #ff3333; font-size: 1rem;">+${item['日增长率']}%</div>
             </div>
         `).join('');
 
     } catch (err) {
-        console.error('加载板块数据失败:', err);
+        console.error('加载基金数据失败:', err);
         el.innerHTML = '<div class="loading">加载失败</div>';
     }
 }
@@ -252,7 +319,9 @@ function init() {
     // 并行加载
     Promise.all([
         loadFearGreedIndex(),
-        // loadMarketOverview(),
+        loadMarketOverview(),
+        loadIndexCompare(),
+        loadFundTop(),
         loadSectorTop(),
         loadSectorBottom()
     ]);
@@ -261,7 +330,9 @@ function init() {
     setInterval(() => {
         updateTime();
         loadFearGreedIndex();
-        // loadMarketOverview();
+        loadMarketOverview();
+        loadIndexCompare();
+        loadFundTop();
         loadSectorTop();
         loadSectorBottom();
     }, 60000);

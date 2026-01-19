@@ -11,10 +11,14 @@ import pandas as pd
 from datetime import datetime
 from typing import Dict, Any, Optional
 
+from .cache import cached
+
+
 class SentimentAnalysis:
     """市场情绪分析类"""
 
     @staticmethod
+    @cached("sentiment:fear_greed", ttl=300, stale_ttl=600)
     def calculate_fear_greed_custom(symbol: str = "sh000001", days: int = 14) -> dict:
         """
         计算自定义恐慌贪婪指数 (基于 RSI 和 Bias)
@@ -25,6 +29,8 @@ class SentimentAnalysis:
         
         Returns:
             dict: 恐慌贪婪评分 (0-100, 越低越恐慌)
+        
+        缓存: 300秒 TTL + 600秒 Stale
         """
         try:
             # 获取历史数据
