@@ -24,6 +24,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 转换镜像名称为小写
+      - name: Lowercase Image Name
+        run: |
+          echo "GHCR_IMAGE=${GHCR_IMAGE,,}" >> ${GITHUB_ENV}
+        env:
+          GHCR_IMAGE: '${{ env.GHCR_IMAGE }}'
+
       # 登录 GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
