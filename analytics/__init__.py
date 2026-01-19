@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-AKShare 分析模块
-提供各种金融数据分析工具和示例
+X-Analytics 核心分析模块
+基于 AKShare 提供 A 股数据分析能力
 """
 
 from .stock_analysis import StockAnalysis

@@ -1,15 +1,17 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from analysis.sentiment_analysis import SentimentAnalysis
+from fastapi.staticfiles import StaticFiles
+from analytics.sentiment_analysis import SentimentAnalysis
+import os
 
-# 创建独立的 FastAPI 应用
-# root_path 用于支持通过 /aktools/ 前缀访问时 Swagger UI 正常工作
+# 创建 FastAPI 应用
+# root_path 用于支持通过反向代理访问时 Swagger UI 正常工作
 app = FastAPI(
-    title="X-Service API",
-    description="自定义数据分析服务，集成 AKShare 数据能力",
+    title="X-Analytics API",
+    description="A 股数据分析服务，基于 AKShare 构建",
     version="1.0.0",
-    root_path="/aktools"
+    root_path="/analytics"
 )
 
 # 配置 CORS (允许跨域)
@@ -22,7 +24,7 @@ app.add_middleware(
 )
 
 # -----------------------------------------------------------------------------
-# 自定义分析接口
+# API 接口
 # -----------------------------------------------------------------------------
 @app.get("/api/x/sentiment/fear-greed", tags=["情绪分析"], summary="获取市场恐慌贪婪指数")
 def get_fear_greed_index(symbol: str = "sh000001", days: int = 14):
@@ -45,7 +47,15 @@ def get_north_flow():
 
 @app.get("/api/x/health", tags=["系统"], summary="服务健康检查")
 def health_check():
-    return {"status": "ok", "service": "x-service", "version": "1.0.0"}
+    return {"status": "ok", "service": "x-analytics", "version": "1.0.0"}
+
+
+# -----------------------------------------------------------------------------
+# 静态文件 (Web 仪表盘)
+# -----------------------------------------------------------------------------
+web_dir = os.path.join(os.path.dirname(__file__), "web")
+if os.path.exists(web_dir):
+    app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
 
 if __name__ == "__main__":
