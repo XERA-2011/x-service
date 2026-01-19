@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from analytics.sentiment_analysis import SentimentAnalysis
+from analytics.sentiment import SentimentAnalysis
 import os
 
 # 创建 FastAPI 应用
