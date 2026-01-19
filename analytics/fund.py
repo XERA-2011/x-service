@@ -156,7 +156,12 @@ class FundAnalysis:
             
             # 尝试按日增长率排序
             if "日增长率" in df.columns:
+                # 转换为数字，不仅为了排序，也为了过滤无效数据 (如货币基金可能为空)
                 df["日增长率_num"] = pd.to_numeric(df["日增长率"], errors="coerce")
+                
+                # 关键修复：过滤掉 NaN (即原数据为空或非数字的记录)
+                df = df.dropna(subset=["日增长率_num"])
+                
                 df = df.sort_values("日增长率_num", ascending=False)
                 
             return df.head(top_n).to_dict(orient="records")
