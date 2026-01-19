@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from analytics.sentiment import SentimentAnalysis
+from analytics.market import MarketAnalysis
 import os
 
 # 创建 FastAPI 应用
@@ -14,7 +15,7 @@ app = FastAPI(
     root_path="/analytics"
 )
 
-# 配置 CORS (允许跨域)
+# CORS 配置
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,27 +24,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # -----------------------------------------------------------------------------
 # API 接口
 # -----------------------------------------------------------------------------
 @app.get("/api/sentiment/fear-greed", tags=["情绪分析"], summary="获取市场恐慌贪婪指数")
 def get_fear_greed_index(symbol: str = "sh000001", days: int = 14):
-    """
-    计算基于 RSI 和 Bias 的自定义恐慌贪婪指数。
-    - 0-20: 极度恐慌 (底部特征)
-    - 80-100: 极度贪婪 (顶部风险)
-    """
+    """自定义恐慌贪婪指数"""
     return SentimentAnalysis.calculate_fear_greed_custom(symbol=symbol, days=days)
 
-@app.get("/api/sentiment/qvix", tags=["情绪分析"], summary="获取中国波指(QVIX)")
-def get_qvix_indices():
-    """获取主要 ETF 期权的波动率指数 (QVIX)"""
-    return SentimentAnalysis.get_qvix_indices()
+@app.get("/api/market/overview", tags=["市场分析"], summary="获取市场概览(指数/成交/涨跌分布)")
+def get_market_overview():
+    """获取主要指数行情、市场广度和两市成交额"""
+    return MarketAnalysis.get_market_overview_v2()
 
-@app.get("/api/sentiment/north-flow", tags=["情绪分析"], summary="获取北向资金情绪")
-def get_north_flow():
-    """获取北向资金(聪明钱)的实时流向与净买入额"""
-    return SentimentAnalysis.get_north_funds_sentiment()
+@app.get("/api/market/sector-top", tags=["市场分析"], summary="获取领涨行业")
+def get_sector_top(n: int = 5):
+    """获取领涨行业板块 Top N"""
+    return MarketAnalysis.get_sector_top(n=n)
+
+@app.get("/api/market/sector-bottom", tags=["市场分析"], summary="获取领跌行业")
+def get_sector_bottom(n: int = 5):
+    """获取领跌行业板块 Top N"""
+    return MarketAnalysis.get_sector_bottom(n=n)
 
 @app.get("/api/health", tags=["系统"], summary="服务健康检查")
 def health_check():

@@ -126,82 +126,145 @@ async function loadFearGreedIndex() {
 // ============================================
 // 北向资金
 // ============================================
-async function loadNorthFlow() {
-    const data = await fetchAPI('/sentiment/north-flow');
-    const statsEl = document.getElementById('north-flow-stats');
+// ============================================
+// 市场概览
+// ============================================
+async function loadMarketOverview() {
+    const el = document.getElementById('market-overview');
 
-    if (!data || data.error) {
-        statsEl.innerHTML = `<p class="error">数据加载失败: ${data?.message || '未知错误'}</p>`;
-        return;
+    try {
+        const data = await fetchAPI('/market/overview');
+        if (!data) throw new Error('无数据');
+
+        let html = '';
+
+        // 1. 指数信息
+        if (data.indices && data.indices.length > 0) {
+            html += '<div style="grid-column: span 2; display: flex; justify-content: space-between; margin-bottom: 20px;">';
+            data.indices.forEach(idx => {
+                const color = idx.change > 0 ? '#ff3333' : (idx.change < 0 ? '#33ff33' : '#888');
+                html += `
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: #888;">${idx.name}</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; margin: 4px 0;">${idx.price}</div>
+                        <div style="font-size: 0.9rem; color: ${color};">${idx.change > 0 ? '+' : ''}${idx.change}%</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+
+        // 2. 市场统计 (涨跌家数 & 成交额)
+        if (data.stats) {
+            const up = data.stats.up || 0;
+            const down = data.stats.down || 0;
+            const total = up + down;
+            const upRatio = total > 0 ? (up / total * 100).toFixed(0) : 0;
+            html += `
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #ff3333">${data.stats.up || 0}</div>
+                    <div class="stat-label">上涨家数 (${upRatio}%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #33ff33">${data.stats.down || 0}</div>
+                    <div class="stat-label">下跌家数</div>
+                </div>
+                <div class="stat-item" style="grid-column: span 2; margin-top: 10px;">
+                    <div class="stat-value">${data.volume_str || '--'}</div>
+                    <div class="stat-label">两市总成交额</div>
+                </div>
+            `;
+        }
+
+        el.innerHTML = html;
+
+    } catch (err) {
+        console.error('加载市场概览失败:', err);
+        el.innerHTML = '<div class="loading">加载失败</div>';
     }
-
-    const totalBuy = data.total_buy || 0;
-    const totalSell = data.total_sell || 0;
-    const netFlow = data.net_flow || 0;
-
-    statsEl.innerHTML = `
-        <div class="stat-item">
-            <div class="stat-value ${netFlow >= 0 ? 'positive' : 'negative'}">
-                ${netFlow >= 0 ? '+' : ''}${formatNumber(netFlow)}
-            </div>
-            <div class="stat-label">今日净流入</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value positive">${formatNumber(totalBuy)}</div>
-            <div class="stat-label">买入额</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value negative">${formatNumber(totalSell)}</div>
-            <div class="stat-label">卖出额</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-value">${data.sentiment || '--'}</div>
-            <div class="stat-label">情绪判断</div>
-        </div>
-    `;
 }
 
 // ============================================
-// 中国波指 QVIX
+// 领涨行业
 // ============================================
-async function loadQVIX() {
-    const data = await fetchAPI('/sentiment/qvix');
-    const listEl = document.getElementById('qvix-list');
+async function loadSectorTop() {
+    const el = document.getElementById('sector-list');
 
-    if (!data || data.error) {
-        listEl.innerHTML = `<p class="error">数据加载失败: ${data?.message || '未知错误'}</p>`;
-        return;
+    try {
+        const data = await fetchAPI('/market/sector-top?n=5');
+        if (!data || data.length === 0) throw new Error('无数据');
+
+        el.innerHTML = data.map(item => `
+            <div class="qvix-item">
+                <div class="qvix-name">${item['板块名称']}</div>
+                <div class="qvix-value" style="color: #ff3333">+${item['涨跌幅'].toFixed(2)}%</div>
+                <div style="font-size: 0.8rem; color: #666;">
+                    ${item['领涨股票']} <span style="color: #ff3333">+${item['领涨股票-涨跌幅'].toFixed(2)}%</span>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error('加载板块数据失败:', err);
+        el.innerHTML = '<div class="loading">加载失败</div>';
     }
+}
 
-    // 渲染列表
-    const indices = data.indices || [];
-    if (indices.length === 0) {
-        listEl.innerHTML = `<p class="loading">暂无数据</p>`;
-        return;
+// ============================================
+// 领跌行业
+// ============================================
+async function loadSectorBottom() {
+    const el = document.getElementById('sector-list-bottom');
+
+    try {
+        const data = await fetchAPI('/market/sector-bottom?n=5');
+        if (!data || data.length === 0) throw new Error('无数据');
+
+        el.innerHTML = data.map(item => `
+            <div class="qvix-item">
+                <div class="qvix-name">${item['板块名称']}</div>
+                <div class="qvix-value" style="color: #33ff33">${item['涨跌幅'].toFixed(2)}%</div>
+                <div style="font-size: 0.8rem; color: #666;">
+                    ${item['领涨股票']} <span style="color: #ff3333">+${item['领涨股票-涨跌幅'].toFixed(2)}%</span>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error('加载板块数据失败:', err);
+        el.innerHTML = '<div class="loading">加载失败</div>';
     }
-
-    listEl.innerHTML = indices.map(item => `
-        <div class="qvix-item">
-            <span class="qvix-name">${item.name || item.code}</span>
-            <span class="qvix-value">${item.value?.toFixed(2) || '--'}</span>
-        </div>
-    `).join('');
 }
 
 // ============================================
 // 初始化
 // ============================================
-async function init() {
-    // 并行加载所有数据
-    await Promise.all([
+function updateTime() {
+    const updateTimeEl = document.getElementById('update-time');
+    if (updateTimeEl) {
+        updateTimeEl.textContent = `最后更新: ${new Date().toLocaleString('zh-CN')}`;
+    }
+}
+
+function init() {
+    updateTime();
+
+    // 并行加载
+    Promise.all([
         loadFearGreedIndex(),
-        loadNorthFlow(),
-        loadQVIX()
+        // loadMarketOverview(),
+        loadSectorTop(),
+        loadSectorBottom()
     ]);
 
-    // 更新时间
-    const updateTimeEl = document.getElementById('update-time');
-    updateTimeEl.textContent = `最后更新: ${new Date().toLocaleString('zh-CN')}`;
+    // 定时刷新 (每分钟)
+    setInterval(() => {
+        updateTime();
+        loadFearGreedIndex();
+        // loadMarketOverview();
+        loadSectorTop();
+        loadSectorBottom();
+    }, 60000);
 }
 
 // 页面加载完成后初始化
