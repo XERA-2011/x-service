@@ -21,19 +21,32 @@
 
     /* Tab Navigation - Scrollable on mobile */
     .tab-navigation {
+        display: flex;
+        /* Ensure flexbox */
         overflow-x: auto;
-        white-space: nowrap;
-        padding-bottom: 0;
-        border-bottom: 2px solid #000;
-        gap: 24px;
+        /* Allow horizontal scroll */
         -webkit-overflow-scrolling: touch;
-        margin-bottom: 24px;
+        /* Smooth scroll on iOS */
+        white-space: nowrap;
+        padding-bottom: 2px;
+        /* Space for scrollbar if any */
+        border-bottom: 2px solid #000;
+        gap: 0;
+        /* Remove gap, use padding on buttons */
+        margin-bottom: 20px;
+        width: 100%;
+        /* Ensure full width */
     }
 
     .tab-btn {
-        flex-shrink: 0;
-        font-size: 14px;
-        padding: 10px 0;
+        flex: 0 0 auto;
+        /* Don't shrink, don't grow, stick to content size */
+        font-size: 15px;
+        /* Readable size */
+        padding: 10px 16px;
+        /* Touch target */
+        margin-right: 8px;
+        /* Spacing between items */
     }
 
     /* Stack Grid */

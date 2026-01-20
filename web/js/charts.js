@@ -16,7 +16,11 @@ class Charts {
                 fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif'
             },
             grid: {
-                borderColor: '#e6e6e6'
+                borderColor: '#e6e6e6',
+                containLabel: true,
+                left: '2%',
+                right: '2%',
+                bottom: '5%'
             }
         };
     }
@@ -154,15 +158,32 @@ class Charts {
                 type: 'category',
                 data: periods,
                 axisLabel: {
-                    color: this.theme.textStyle.color
+                    color: this.theme.textStyle.color,
+                    interval: 0, // Show all labels
+                    rotate: window.innerWidth < 768 ? 90 : 0, // Vertical on mobile
+                    fontSize: window.innerWidth < 768 ? 9 : 12,
+                    margin: 8
                 }
             },
             yAxis: {
                 type: 'value',
                 axisLabel: {
                     formatter: '{value}%',
-                    color: this.theme.textStyle.color
+                    color: this.theme.textStyle.color,
+                    fontSize: 10
+                },
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#f0f0f0'
+                    }
                 }
+            },
+            grid: {
+                left: '10%',
+                right: '5%',
+                bottom: window.innerWidth < 768 ? '25%' : '10%', // More space for vertical labels
+                top: '10%'
             },
             series: [{
                 data: yields,
