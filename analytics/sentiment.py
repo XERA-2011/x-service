@@ -18,7 +18,7 @@ class SentimentAnalysis:
     """市场情绪分析类"""
 
     @staticmethod
-    @cached("sentiment:fear_greed", ttl=300, stale_ttl=600)
+    @cached("sentiment:fear_greed", ttl=3600, stale_ttl=7200)
     def calculate_fear_greed_custom(symbol: str = "sh000001", days: int = 14) -> dict:
         """
         计算自定义恐慌贪婪指数 (基于 RSI 和 Bias)
@@ -39,33 +39,96 @@ class SentimentAnalysis:
                 return {}
 
             close = df["close"]
-
-            # 1. 计算 RSI (权重 60%)
+            
+            # --- 1. 动量指标: RSI (权重 25%) ---
+            # 反映价格变化的快慢
             delta = close.diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=days).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=days).mean()
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
             current_rsi = rsi.iloc[-1]
+            
+            # 映射: RSI > 80 (贪婪), < 20 (恐慌)
+            # RSI本身就是0-100，直接使用
+            score_rsi = current_rsi
 
-            # 2. 计算 Bias 乖离率 (权重 40%)
+            # --- 2. 价格偏离: Bias 乖离率 (权重 25%) ---
+            # 反映价格偏离均线的程度
             ma20 = close.rolling(window=20).mean()
             bias = (close - ma20) / ma20 * 100
             current_bias = bias.iloc[-1]
 
-            # 将 Bias 映射到 0-100 (假设 Bias -5 到 5 是正常区间)
-            # Bias -5 -> 0, Bias 5 -> 100
-            bias_score = (current_bias + 5) * 10
-            bias_score = max(0, min(100, bias_score))
+            # 映射: Bias -5% (0分) -> +5% (100分)
+            # 超过范围截断
+            score_bias = (current_bias + 5) * 10
+            score_bias = max(0, min(100, score_bias))
 
-            # 综合评分
-            final_score = current_rsi * 0.6 + bias_score * 0.4
+            # --- 3. 市场广度: 涨跌家数比 (权重 25%) ---
+            # 反映市场参与度
+            score_breadth = 50 # 默认中性
+            try:
+                up_down = ak.stock_zh_a_spot_em()
+                if not up_down.empty:
+                    up_count = len(up_down[up_down["涨跌幅"] > 0])
+                    total_count = len(up_down)
+                    # 简单计算: 上涨家数占比
+                    # 全涨 -> 100, 全跌 -> 0
+                    if total_count > 0:
+                        score_breadth = (up_count / total_count) * 100
+            except Exception as e:
+                print(f"获取市场广度失败: {e}")
+
+            # --- 4. 市场恐慌: 波动率 QVIX (权重 25%) ---
+            # 反映期权市场对未来的恐慌预期
+            score_qvix = 50 # 默认中性
+            try:
+                # 获取 50ETF 期权波动率作为代表
+                qvix_df = ak.index_option_50etf_qvix()
+                if not qvix_df.empty:
+                    # 适配不同列名
+                    col = "close" if "close" in qvix_df.columns else (
+                        "qvix" if "qvix" in qvix_df.columns else qvix_df.columns[0]
+                    )
+                    current_vix = float(qvix_df.iloc[-1][col])
+                    
+                    # VIX 越高越恐慌 (分数越低)
+                    # 假设 VIX 15 为贪婪(100分), VIX 35 为极度恐慌(0分)
+                    # 这是一个反向指标
+                    # 线性映射: (35 - VIX) / (35 - 15) * 100
+                    # VIX <= 15 -> Score 100
+                    # VIX >= 35 -> Score 0
+                    
+                    if current_vix <= 15:
+                        score_qvix = 100
+                    elif current_vix >= 35:
+                        score_qvix = 0
+                    else:
+                        score_qvix = (35 - current_vix) / 20 * 100
+            except Exception as e:
+                print(f"获取波动率失败: {e}")
+
+            # 综合评分 (各 25%)
+            final_score = (
+                score_rsi * 0.25 + 
+                score_bias * 0.25 + 
+                score_breadth * 0.25 + 
+                score_qvix * 0.25
+            )
 
             return {
                 "score": final_score,
                 "rsi": current_rsi,
                 "bias": current_bias,
+                "breadth": score_breadth,
+                "qvix_score": score_qvix,
                 "date": df["date"].iloc[-1],
+                "details": {
+                    "rsi_val": round(current_rsi, 2),
+                    "bias_val": round(current_bias, 2),
+                    "breadth_score": round(score_breadth, 2),
+                    "qvix_score": round(score_qvix, 2)
+                }
             }
         except Exception as e:
             print(f"计算自定义恐慌指数失败: {e}")
@@ -214,7 +277,12 @@ def analyze_sentiment_report():
     # 1. 恐慌贪婪指数 (自定义)
     print("\n😨 恐慌与贪婪指数 (自定义算法)")
     print("-" * 60)
-    print("基于 上证指数 的 RSI(60%) + Bias(40%) 计算")
+    print("基于 多维度模型计算:")
+    print("1. RSI (25%) - 价格动量")
+    print("2. Bias (25%) - 价格乖离")
+    print("3. 广度 (25%) - 市场参与度")
+    print("4. QVIX (25%) - 恐慌波动率")
+    
     fg_data = SentimentAnalysis.calculate_fear_greed_custom()
 
     score = 50  # 默认中性
@@ -229,11 +297,16 @@ def analyze_sentiment_report():
             status = "极度恐慌 🟢"
         elif score < 40:
             status = "恐慌 🔵"
+        
+        details = fg_data.get("details", {})
 
         print(f"日期: {fg_data.get('date', '-')}")
         print(f"综合评分: {score:.1f} / 100 ({status})")
-        print(f"  - RSI指标: {fg_data.get('rsi', 0):.1f}")
-        print(f"  - 乖离率Bias: {fg_data.get('bias', 0):.2f}%")
+        print("-" * 30)
+        print(f"  - RSI指标: {details.get('rsi_val', 0):.1f} (原始值)")
+        print(f"  - 乖离率Bias: {details.get('bias_val', 0):.2f}% (原始值)")
+        print(f"  - 市场广度: {details.get('breadth_score', 0):.1f}分 (上涨占比)")
+        print(f"  - 恐慌波动率: {details.get('qvix_score', 0):.1f}分 (反向指标)")
     else:
         print("计算失败，暂无数据")
 

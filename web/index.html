@@ -26,14 +26,8 @@
     <header class="navbar">
         <div class="navbar-content">
             <div class="navbar-brand">
-                <div class="brand-icon">
-                    <i data-lucide="activity" class="brand-icon-svg"></i>
-                </div>
+
                 <span class="brand-text">x-analytics</span>
-            </div>
-            <div class="navbar-status">
-                <span class="status-dot"></span>
-                <span class="status-text">实时连接</span>
             </div>
         </div>
     </header>
@@ -48,24 +42,8 @@
                 </span>
             </div>
 
-            <div class="grid-core-monitor">
-                <!-- 恐慌贪婪指数 (左侧大图) -->
-                <div class="card card-hero card-glow" id="fear-greed-card">
-                    <div class="card-header">
-                        <span>恐慌贪婪指数</span>
-                    </div>
-                    <div class="card-body flex-center">
-                        <div id="fear-greed-gauge" class="chart-gauge"></div>
-                        <div class="indicator-overlay" id="fear-greed-info">
-                            <p class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 主要指数对比 (右侧列表) -->
+            <div class="grid-core-monitor" style="grid-template-columns: 1fr;">
+                <!-- 主要指数对比 (右侧列表 -> 全宽列表) -->
                 <div class="card card-list">
                     <div class="card-header">
                         <span>核心指数</span>
@@ -90,7 +68,23 @@
                 </span>
             </div>
 
-            <div class="grid-market-depth">
+            <div class="grid-market-depth" style="grid-template-columns: repeat(2, 1fr);">
+                <!-- 恐慌贪婪指数 (Move Here) -->
+                <div class="card card-hero card-glow" id="fear-greed-card" style="min-height: auto;">
+                    <div class="card-header">
+                        <span>恐慌贪婪指数</span>
+                    </div>
+                    <div class="card-body flex-center" style="height: 320px;">
+                        <div id="fear-greed-gauge" class="chart-gauge" style="height: 100%;"></div>
+                        <div class="indicator-overlay" id="fear-greed-info">
+                            <p class="loading">
+                                <i data-lucide="loader-2" class="loading-spinner"></i>
+                                加载中...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 市场概况 -->
                 <div class="card card-summary">
                     <div class="card-header">

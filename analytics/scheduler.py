@@ -272,7 +272,7 @@ def setup_default_warmup_jobs():
         func=lambda: warmup_cache(
             SentimentAnalysis.calculate_fear_greed_custom, symbol="sh000001", days=14
         ),
-        trading_interval_minutes=5,
+        trading_interval_minutes=60,
         non_trading_interval_minutes=240,
     )
 

@@ -118,7 +118,7 @@ body {
     margin: 0 auto;
     height: 100%;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     padding: 0 24px;
 }
@@ -129,23 +129,7 @@ body {
     gap: 12px;
 }
 
-.brand-icon {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #111, #333);
-    border: 1px solid var(--border-highlight);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-}
 
-.brand-icon-svg {
-    color: white;
-    width: 20px;
-    height: 20px;
-}
 
 .brand-text {
     font-size: 1.25rem;
