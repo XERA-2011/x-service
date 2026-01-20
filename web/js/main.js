@@ -481,20 +481,20 @@ class App {
 
         const html = data.map(item => {
             const change = item.change_pct;
-            // Determine background intensity based on change magnitude
-            const intensity = Math.min(Math.abs(change) * 15, 60) + 10;
-            const colorVar = change >= 0 ? `rgba(34, 197, 94, ${intensity / 100})` : `rgba(239, 68, 68, ${intensity / 100})`;
+            // No background color, just text color class
+            const changeClass = change >= 0 ? 'text-up' : 'text-down';
 
+            // Minimalist Block
             return `
-                <div class="heat-block" style="background-color: ${colorVar}">
-                    <div class="heat-name" title="${item.name}">${item.name}</div>
-                    <div class="heat-val">${utils.formatPercentage(change)}</div>
+                <div class="heat-metric">
+                    <div class="metric-label">${item.name}</div>
+                    <div class="metric-value ${changeClass}">${utils.formatPercentage(change)}</div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
-        container.className = 'market-heat-container us-heat-grid'; // Ensure grid layout if needed
+        container.className = 'heat-metrics'; // Use the grid class defined in components.css
     }
 
     renderUSBondYields(data) {
@@ -672,7 +672,7 @@ class App {
         const infoContainer = document.createElement('div');
         infoContainer.className = 'fear-greed-info';
         infoContainer.innerHTML = `
-            <div class="fear-greed-score" style="color: ${this.getFearGreedColor(data.score)}">${data.score}</div>
+            <div class="fear-greed-score">${data.score}</div>
             <div class="fear-greed-level">${data.level}</div>
             <div class="fear-greed-description">${data.description}</div>
         `;
@@ -732,27 +732,30 @@ class App {
             return;
         }
 
+        // Minimalist Output: Score + Grid
         const html = `
-            <div class="heat-score-section">
-                <div class="heat-score" style="color: ${this.getHeatColor(data.heat_score)}">${data.heat_score}</div>
-                <div class="heat-level">${data.heat_level}</div>
-            </div>
-            <div class="heat-metrics">
-                <div class="heat-metric">
-                    <div class="metric-label">成交额</div>
-                    <div class="metric-value">${utils.formatNumber(data.total_turnover)}亿</div>
+            <div class="market-heat-container">
+                <div class="heat-score-section">
+                    <div class="heat-score">${data.heat_score}</div>
+                    <div class="heat-level">${data.heat_level}</div>
                 </div>
-                <div class="heat-metric">
-                    <div class="metric-label">涨跌比</div>
-                    <div class="metric-value">${data.rise_fall_ratio}</div>
-                </div>
-                <div class="heat-metric">
-                    <div class="metric-label">强势股</div>
-                    <div class="metric-value">${data.strong_stocks}</div>
-                </div>
-                <div class="heat-metric">
-                    <div class="metric-label">活跃度</div>
-                    <div class="metric-value">${data.activity_level}</div>
+                <div class="heat-metrics">
+                    <div class="heat-metric">
+                        <div class="metric-label">成交额</div>
+                        <div class="metric-value">${utils.formatNumber(data.total_turnover)}亿</div>
+                    </div>
+                    <div class="heat-metric">
+                        <div class="metric-label">涨跌比</div>
+                        <div class="metric-value">${data.rise_fall_ratio}</div>
+                    </div>
+                    <div class="heat-metric">
+                        <div class="metric-label">强势股</div>
+                        <div class="metric-value">${data.strong_stocks}</div>
+                    </div>
+                    <div class="heat-metric">
+                        <div class="metric-label">活跃度</div>
+                        <div class="metric-value">${data.activity_level}</div>
+                    </div>
                 </div>
             </div>
         `;

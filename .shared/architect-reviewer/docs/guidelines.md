@@ -7,7 +7,7 @@
 - **Caching**: Use the `@cached` decorator for any external API call (AkShare).
 
 ## 2. Web Frontend (Vanilla JS + CSS)
-- **Design System**: "Black Glass". Minimalist. No colored icons unless data-driven.
+- **Design System**: "Bloomberg/High-Contrast". Pure white background, black text, strict borders. No shadows, gradients, or rounded corners. Information density over aesthetics.
 - **Performance**: Avoid forced reflows. Use `requestAnimationFrame` for animations.
 - **Structure**: Separation of concerns.
     - `data.js`: Data fetching logic.

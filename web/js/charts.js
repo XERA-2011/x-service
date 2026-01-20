@@ -8,15 +8,15 @@ class Charts {
 
     // 获取主题配置
     getTheme() {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Bloomberg Style: High Contrast, no dark mode detection
         return {
             backgroundColor: 'transparent',
             textStyle: {
-                color: isDark ? '#f8fafc' : '#0f172a',
-                fontFamily: 'Fira Sans, sans-serif'
+                color: '#000000',
+                fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif'
             },
             grid: {
-                borderColor: isDark ? '#334155' : '#e2e8f0'
+                borderColor: '#e6e6e6'
             }
         };
     }
@@ -32,10 +32,10 @@ class Charts {
         }
 
         const chart = echarts.init(container);
-        
+
         const score = data.score || 50;
         const level = data.level || '中性';
-        
+
         // 根据分数确定颜色
         let color;
         if (score >= 80) color = '#ef4444'; // 极度贪婪 - 红色
@@ -137,15 +137,15 @@ class Charts {
         }
 
         const chart = echarts.init(container);
-        
+
         const periods = Object.keys(data.yield_curve || {});
         const yields = Object.values(data.yield_curve || {});
-        
+
         const option = {
             ...this.theme,
             tooltip: {
                 trigger: 'axis',
-                formatter: function(params) {
+                formatter: function (params) {
                     const point = params[0];
                     return `${point.name}: ${point.value}%`;
                 }
@@ -169,21 +169,11 @@ class Charts {
                 type: 'line',
                 smooth: true,
                 lineStyle: {
-                    color: '#3b82f6',
-                    width: 3
+                    color: '#000000',
+                    width: 2
                 },
                 itemStyle: {
-                    color: '#3b82f6'
-                },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0, y: 0, x2: 0, y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
-                            { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
-                        ]
-                    }
+                    color: '#000000'
                 }
             }]
         };
@@ -208,16 +198,16 @@ class Charts {
         }
 
         const chart = echarts.init(container);
-        
+
         const history = data.history || [];
         const dates = history.map(item => item.date);
         const ratios = history.map(item => item.ratio);
-        
+
         const option = {
             ...this.theme,
             tooltip: {
                 trigger: 'axis',
-                formatter: function(params) {
+                formatter: function (params) {
                     const point = params[0];
                     return `${point.name}<br/>金银比: ${point.value}`;
                 }
@@ -227,7 +217,7 @@ class Charts {
                 data: dates,
                 axisLabel: {
                     color: this.theme.textStyle.color,
-                    formatter: function(value) {
+                    formatter: function (value) {
                         return value.split('-').slice(1).join('/');
                     }
                 }
@@ -243,21 +233,11 @@ class Charts {
                 type: 'line',
                 smooth: true,
                 lineStyle: {
-                    color: '#f59e0b',
+                    color: '#000000',
                     width: 2
                 },
                 itemStyle: {
-                    color: '#f59e0b'
-                },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0, y: 0, x2: 0, y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(245, 158, 11, 0.3)' },
-                            { offset: 1, color: 'rgba(245, 158, 11, 0.1)' }
-                        ]
-                    }
+                    color: '#000000'
                 }
             }]
         };
@@ -283,7 +263,9 @@ class Charts {
     // 响应式处理
     resize() {
         this.charts.forEach(chart => {
-            chart.resize();
+            if (chart && typeof chart.resize === 'function') {
+                chart.resize();
+            }
         });
     }
 }

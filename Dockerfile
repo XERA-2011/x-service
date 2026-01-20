@@ -8,8 +8,12 @@ WORKDIR /build
 # 只复制依赖文件，利用 Docker 缓存
 COPY requirements.txt .
 
-# 安装依赖到用户目录，使用阿里云镜像加速
-RUN pip install --no-cache-dir --user -r requirements.txt \
+# 升级 pip 并安装依赖 (抑制警告)
+ENV PATH=/root/.local/bin:$PATH
+ENV PIP_ROOT_USER_ACTION=ignore
+RUN pip install --no-cache-dir --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --no-cache-dir --user -r requirements.txt \
+    --no-warn-script-location \
     -i https://mirrors.aliyun.com/pypi/simple/ \
     --trusted-host mirrors.aliyun.com
 
