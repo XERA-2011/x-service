@@ -141,6 +141,10 @@ class API {
     }
 
     // Metals
+    async getGoldSilverRatio() {
+        return this.request('/metals/gold-silver-ratio');
+    }
+
     async getMetalSpotPrices() {
         return this.request('/metals/spot-prices');
     }

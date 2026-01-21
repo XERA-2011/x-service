@@ -56,7 +56,7 @@ class GoldSilverAnalysis:
                 print(f"获取 SGE 数据失败: {e_sge}")
 
             if gold_price <= 0 or silver_price <= 0:
-                print("无法获取有效的金银价格")
+                print(f"无法获取有效的金银价格: Gold={gold_price}, Silver={silver_price}")
                 return {"error": "数据源不可用", "ratio": {"current": 0}}
 
             # 计算金银比 (无量纲)

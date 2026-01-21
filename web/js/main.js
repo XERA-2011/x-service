@@ -507,18 +507,22 @@ class App {
             return;
         }
 
-        const html = data.map(item => {
+        const html = `
+            <div class="bond-scroll">
+                ${data.map(item => {
             let valClass = '';
             if (item.is_spread) {
                 valClass = item.value < 0 ? 'text-down' : 'text-up';
             }
             return `
-                <div class="bond-item">
-                    <span class="bond-name">${item.name}</span>
-                    <span class="bond-rate ${valClass}">${item.value}${item.suffix || ''}</span>
-                </div>
-            `;
-        }).join('');
+                        <div class="bond-item">
+                            <span class="bond-name">${item.name}</span>
+                            <span class="bond-rate ${valClass}">${item.value}${item.suffix || ''}</span>
+                        </div>
+                    `;
+        }).join('')}
+            </div>
+        `;
 
         container.innerHTML = html;
     }
@@ -793,22 +797,34 @@ class App {
         const container = document.getElementById('cn-bonds');
         if (!container) return;
 
-        if (!data || data.length === 0) {
-            this.renderError('cn-bonds', '暂无数据');
+        if (!data || data.error) {
+            this.renderError('cn-bonds', data && data.error ? data.error : '暂无数据');
             return;
         }
 
-        // Check data structure (support both simple array and yield_curve object)
-        const yieldCurve = Array.isArray(data) ? data : (data.yield_curve || []);
+        // Handle dictionary yield_curve
+        const yieldCurve = data.yield_curve || {};
+        const keyRates = data.key_rates;
 
-        // If it's the complex object structure
-        if (data.key_rates) {
+        // Convert dictionary to array for mapping if it's not already an array
+        let curveItems = [];
+        if (Array.isArray(yieldCurve)) {
+            curveItems = yieldCurve;
+        } else {
+            curveItems = Object.entries(yieldCurve).map(([period, rate]) => ({
+                period: period.toUpperCase(),
+                yield: rate,
+                change_bp: data.yield_changes ? (data.yield_changes[period] || 0) : 0
+            }));
+        }
+
+        if (keyRates) {
             const html = `
                 <div class="bond-scroll">
-                    ${yieldCurve.map(item => `
+                    ${curveItems.map(item => `
                         <div class="bond-item">
                             <span class="bond-name">${item.period}</span>
-                            <span class="bond-rate">${item.yield}%</span>
+                            <span class="bond-rate">${utils.formatPercentage(item.yield)}</span>
                              <span class="bond-change ${utils.formatChange(item.change_bp).class}" style="font-size: 10px; display: block;">
                                 ${item.change_bp > 0 ? '+' : ''}${item.change_bp}bp
                             </span>
@@ -816,16 +832,15 @@ class App {
                     `).join('')}
                 </div>
                 <div style="font-size: 12px; padding: 8px; color: var(--text-secondary); border-top: 1px solid var(--border-light);">
-                    10年期: ${utils.formatPercentage(data.key_rates['10y'])} | 期限利差: ${utils.formatNumber(data.key_rates.spread_10y_2y, 3)}%
+                    10年期: ${utils.formatPercentage(keyRates['10y'])} | 期限利差: ${utils.formatNumber(keyRates.spread_10y_2y, 3)}%
                 </div>
             `;
             container.innerHTML = html;
         } else {
-            // Simple array structure fallback
-            const html = yieldCurve.map(item => `
+            const html = curveItems.map(item => `
                 <div class="bond-item">
-                    <span class="bond-name">${item.name || item.period}</span>
-                    <span class="bond-rate">${item.value || item.yield}%</span>
+                    <span class="bond-name">${item.period || item.name}</span>
+                    <span class="bond-rate">${item.yield || item.value}%</span>
                 </div>
             `).join('');
             container.innerHTML = html;

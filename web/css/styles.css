@@ -32,6 +32,14 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    /* Remove tap highlight on mobile */
+}
+
+html,
+body {
+    overscroll-behavior: none;
+    /* Disable elastic scrolling */
 }
 
 body {
@@ -90,12 +98,19 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
-@media (max-width: 380px) {
+@media (max-width: 640px) {
     .grid {
         grid-template-columns: 1fr;
     }
 
-    /* Force single column on tiny screens */
+    .card {
+        padding: 12px;
+        overflow: hidden;
+    }
+
+    .main-container {
+        padding: 12px;
+    }
 }
 
 /* Navbar */
@@ -201,6 +216,8 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    overflow: hidden;
+    /* Prevent content from pushing out */
 }
 
 .card.hero {
@@ -237,7 +254,10 @@ body {
 .fg-gauge {
     width: 140px;
     height: 140px;
-    margin-bottom: 8px;
+    min-height: 140px;
+    margin: 0 auto 8px auto;
+    position: relative;
+    flex-shrink: 0;
 }
 
 .fg-score {
@@ -338,18 +358,19 @@ body {
     margin-top: 4px;
 }
 
-/* 4. Bonds / Horizontal Scroll */
+/* 4. Bonds / Grid Layout */
 .bond-scroll {
     display: flex;
-    overflow-x: auto;
-    gap: 12px;
-    padding-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 0;
 }
 
 .bond-item {
-    min-width: 80px;
+    flex: 1 0 84px;
+    /* Grow to fill, min width 84px */
     text-align: center;
-    padding: 8px;
+    padding: 8px 4px;
     background: var(--bg-subtle);
     border-radius: 4px;
 }
@@ -366,6 +387,7 @@ body {
     font-family: var(--font-mono);
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 /* Utility Classes */
