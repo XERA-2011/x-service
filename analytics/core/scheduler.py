@@ -255,11 +255,133 @@ def is_trading_day(d: Optional[date] = None) -> bool:
     return True
 
 
+from .cache import warmup_cache
+from ..modules.market_cn import (
+    CNFearGreedIndex,
+    CNMarketLeaders,
+    CNMarketHeat,
+    CNDividendStrategy,
+    CNBonds,
+)
+from ..modules.market_us import (
+    USFearGreedIndex,
+    USMarketHeat,
+    USTreasury,
+    USMarketLeaders
+)
+from ..modules.metals import GoldSilverAnalysis, MetalSpotPrice
+
+
 def setup_default_jobs():
     """设置默认的预热任务"""
-
     print("🔧 设置默认预热任务...")
 
+    # =========================================================================
+    # 沪港深市场 (CN Market)
+    # =========================================================================
+    
+    # 1. 恐慌贪婪指数 (30分/4小时)
+    scheduler.add_market_job(
+        job_id="warmup:cn:fear_greed",
+        func=lambda: warmup_cache(CNFearGreedIndex.calculate, symbol="sh000001", days=14),
+        market="market_cn"
+    )
+
+    # 2. 市场热度 (15分/1小时) -> 使用较短间隔
+    scheduler.add_market_job(
+        job_id="warmup:cn:heat",
+        func=lambda: warmup_cache(CNMarketHeat.get_market_heat),
+        market="market_cn"
+    )
+
+    # 3. 领涨/领跌板块
+    scheduler.add_market_job(
+        job_id="warmup:cn:gainers",
+        func=lambda: warmup_cache(CNMarketLeaders.get_top_gainers),
+        market="market_cn"
+    )
+    scheduler.add_market_job(
+        job_id="warmup:cn:losers",
+        func=lambda: warmup_cache(CNMarketLeaders.get_top_losers),
+        market="market_cn"
+    )
+    scheduler.add_market_job(
+        job_id="warmup:cn:sectors",
+        func=lambda: warmup_cache(CNMarketLeaders.get_sector_leaders),
+        market="market_cn"
+    )
+
+    # 4. 红利低波 & 国债 (低频: 4h)
+    scheduler.add_simple_job(
+        job_id="warmup:cn:dividend",
+        func=lambda: warmup_cache(CNDividendStrategy.get_dividend_stocks),
+        interval_minutes=240
+    )
+    scheduler.add_simple_job(
+        job_id="warmup:cn:bonds",
+        func=lambda: warmup_cache(CNBonds.get_bond_market_analysis),
+        interval_minutes=240
+    )
+
+    # =========================================================================
+    # 美股市场 (US Market)
+    # =========================================================================
+
+    # 1. CNN 恐慌指数
+    scheduler.add_market_job(
+        job_id="warmup:us:fear_cnn",
+        func=lambda: warmup_cache(USFearGreedIndex.get_cnn_fear_greed),
+        market="market_us"
+    )
+    
+    # 2. 自定义恐慌指数
+    scheduler.add_market_job(
+        job_id="warmup:us:fear_custom",
+        func=lambda: warmup_cache(USFearGreedIndex.calculate_custom_index),
+        market="market_us"
+    )
+
+    # 3. 板块热度 & 领涨
+    scheduler.add_market_job(
+        job_id="warmup:us:heat",
+        func=lambda: warmup_cache(USMarketHeat.get_sector_performance),
+        market="market_us"
+    )
+    scheduler.add_market_job(
+        job_id="warmup:us:leaders",
+        func=lambda: warmup_cache(USMarketLeaders.get_leaders),
+        market="market_us"
+    )
+
+    # 4. 美债 (低频)
+    scheduler.add_simple_job(
+        job_id="warmup:us:treasury",
+        func=lambda: warmup_cache(USTreasury.get_us_bond_yields),
+        interval_minutes=240
+    )
+
+    # =========================================================================
+    # 贵金属 (Metals)
+    # =========================================================================
+
+    # 1. 金银比
+    scheduler.add_market_job(
+        job_id="warmup:metals:ratio",
+        func=lambda: warmup_cache(GoldSilverAnalysis.get_gold_silver_ratio),
+        market="metals"
+    )
+
+    # 2. 现货价格
+    scheduler.add_market_job(
+        job_id="warmup:metals:prices",
+        func=lambda: warmup_cache(MetalSpotPrice.get_spot_prices),
+        market="metals"
+    )
+
+    # =========================================================================
+    # 固定时间任务
+    # =========================================================================
+    
     # 开盘前预热任务 (工作日 9:25)
     def pre_market_warmup():
         if is_trading_day():
@@ -273,29 +395,35 @@ def setup_default_jobs():
     )
 
 
-def warmup_with_retry(func, name: str, max_retries: int = 3, *args, **kwargs) -> bool:
-    """带重试的缓存预热"""
-    import time
-    from .cache import warmup_cache
-
-    for attempt in range(max_retries):
-        try:
-            warmup_cache(func, *args, **kwargs)
-            return True
-        except Exception as e:
-            if attempt < max_retries - 1:
-                wait_time = 2**attempt  # 指数退避
-                print(f"  ⚠️ {name}预热失败 (尝试 {attempt + 1}/{max_retries}): {e}")
-                print(f"     {wait_time}秒后重试...")
-                time.sleep(wait_time)
-            else:
-                print(f"  ❌ {name}预热失败 (已重试{max_retries}次): {e}")
-                return False
-    return False
-
-
 def initial_warmup():
     """启动时立即执行一次预热"""
     print("🔥 开始初始缓存预热...")
-    # 这里会在后续步骤中添加具体的预热逻辑
-    print("🔥 初始缓存预热完成")
+    
+    try:
+        # 使用线程池或简单顺序执行 (这里为了简单使用顺序，因 warmup_cache 内部有锁且 Server 是异步启动)
+        # 也可以考虑并行，但 akshare 某些接口有并发限制
+        
+        # CN
+        warmup_cache(CNFearGreedIndex.calculate, symbol="sh000001", days=14)
+        warmup_cache(CNMarketHeat.get_market_heat)
+        warmup_cache(CNMarketLeaders.get_top_gainers)
+        # warmup_cache(CNMarketLeaders.get_top_losers) # 可选，减少启动时间
+        
+        # US
+        warmup_cache(USFearGreedIndex.get_cnn_fear_greed)
+        warmup_cache(USMarketHeat.get_sector_performance)
+
+        # Metals
+        warmup_cache(GoldSilverAnalysis.get_gold_silver_ratio)
+
+        print("✅ 核心指标预热完成")
+        
+        # 后台继续预热次要数据 (如果需要，可以另起线程，但 initial_warmup 本身已经在 thread 中运行)
+        warmup_cache(CNDividendStrategy.get_dividend_stocks)
+        warmup_cache(CNBonds.get_bond_market_analysis)
+        warmup_cache(USTreasury.get_us_bond_yields)
+
+    except Exception as e:
+        print(f"❌ 初始预热过程中发生错误: {e}")
+    
+    print("🔥 初始缓存预热结束")
