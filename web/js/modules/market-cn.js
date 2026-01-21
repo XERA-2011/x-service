@@ -90,11 +90,11 @@ class CNMarketController {
     }
 
     renderCNLeaders(gainers, losers) {
-        this.renderSectorList('cn-gainers', gainers.sectors || []);
-        this.renderSectorList('cn-losers', losers.sectors || []);
+        this.renderSectorList('cn-gainers', gainers.sectors || [], '领涨');
+        this.renderSectorList('cn-losers', losers.sectors || [], '领跌');
     }
 
-    renderSectorList(containerId, sectors) {
+    renderSectorList(containerId, sectors, label = '领涨') {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -109,7 +109,7 @@ class CNMarketController {
                 <div class="list-item">
                     <div class="item-main">
                         <span class="item-title">${sector.name}</span>
-                        <span class="item-sub">${sector.stock_count}家 | 领涨: ${sector.leading_stock || '--'}</span>
+                        <span class="item-sub">${sector.stock_count}家 | ${label}: ${sector.leading_stock || '--'}</span>
                     </div>
                     <div style="text-align: right;">
                         <div class="item-value">${utils.formatNumber(sector.total_market_cap / 100000000)}亿</div>
