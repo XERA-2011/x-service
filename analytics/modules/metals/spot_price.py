@@ -1,79 +1,83 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-Date: 2026/01/20
-Desc: 有色金属现货价格
+Date: 2026/01/21
+Desc: 主流金属价格 (COMEX 期货)
 """
 
 import akshare as ak
 from typing import List, Dict, Any
 from ...core.cache import cached
 from ...core.config import settings
-from ...core.utils import safe_float
+from ...core.utils import safe_float, get_beijing_time, akshare_call_with_retry
 
 
 class MetalSpotPrice:
-    """金属现货价格分析"""
+    """主流金属价格分析 (COMEX)"""
+
+    # 主流金属合约代码 (COMEX/NYMEX)
+    METALS = [
+        {"code": "GC00Y", "name": "黄金", "unit": "USD/oz"},
+        {"code": "SI00Y", "name": "白银", "unit": "USD/oz"},
+        {"code": "HG00Y", "name": "铜", "unit": "USD/lb"},
+        {"code": "PL00Y", "name": "铂金", "unit": "USD/oz"},
+        {"code": "PA00Y", "name": "钯金", "unit": "USD/oz"},
+    ]
 
     @staticmethod
     @cached(
-        "metals:spot_price", ttl=settings.CACHE_TTL.get("metals", 3600), stale_ttl=7200
+        "metals:spot_price", ttl=settings.CACHE_TTL.get("metals", 300), stale_ttl=600
     )
     def get_spot_prices() -> List[Dict[str, Any]]:
         """
-        获取金属现货价格 (以上海黄金交易所 SGE 为主)
+        获取主流金属价格 (COMEX 期货)
         """
         results = []
         try:
-            # SGE 黄金/白银 T+D
-            # 接口: ak.spot_quotations_sge(symbol=...)
-            targets = [
-                {"symbol": "Au99.99", "name": "黄金9999", "unit": "元/克"},
-                {"symbol": "Ag(T+D)", "name": "白银T+D", "unit": "元/千克"},
-                {"symbol": "Au(T+D)", "name": "黄金T+D", "unit": "元/克"},
-                {"symbol": "mAu(T+D)", "name": "迷你黄金T+D", "unit": "元/克"},
-            ]
+            # 使用带重试的 API 调用
+            df = akshare_call_with_retry(ak.futures_global_spot_em)
 
-            for item in targets:
+            if df.empty:
+                print("❌ 无法获取期货数据")
+                return []
+
+            for metal in MetalSpotPrice.METALS:
                 try:
-                    symbol = item["symbol"]
-                    name = item["name"]
-                    unit = item["unit"]
+                    code = metal["code"]
+                    name = metal["name"]
+                    unit = metal["unit"]
 
-                    df = ak.spot_quotations_sge(symbol=symbol)
+                    # 查找合约
+                    row = df[df["代码"] == code]
 
-                    if not df.empty:
-                        # 获取最新一行
-                        latest = df.iloc[-1]
-                        current_price = safe_float(latest["现价"])
+                    # 备用: 尝试模糊匹配
+                    if row.empty:
+                        prefix = code[:2]  # GC, SI, HG, PL, PA
+                        row = df[df["代码"].str.startswith(prefix, na=False)].head(1)
 
-                        # 估算涨跌幅 (因接口无直接涨跌幅，尝试用第一笔数据作为参考开盘价)
-                        # 注意：这只是日内涨跌幅的近似
-                        change_pct = 0.0
-                        if len(df) > 0:
-                            first = df.iloc[0]
-                            open_price = safe_float(first["现价"])
-                            if open_price > 0:
-                                change_pct = (
-                                    (current_price - open_price) / open_price * 100
-                                )
+                    if row.empty:
+                        print(f"⚠️ 未找到 {name} ({code})")
+                        continue
 
-                        results.append(
-                            {
-                                "name": name,
-                                "symbol": symbol,
-                                "price": current_price,
-                                "change_pct": round(change_pct, 2),
-                                "unit": unit,
-                                "source": "SGE",
-                                "update_time": str(latest.get("更新时间", "")),
-                            }
-                        )
+                    data = row.iloc[0]
+                    price = safe_float(data["最新价"])
+                    change_pct = safe_float(data["涨跌幅"])
+
+                    results.append({
+                        "name": name,
+                        "code": code,
+                        "price": round(price, 2),
+                        "change_pct": round(change_pct, 2),
+                        "unit": unit,
+                        "source": "COMEX",
+                    })
+
                 except Exception as e_inner:
-                    print(f"获取 {item['symbol']} 失败: {e_inner}")
+                    print(f"获取 {metal['name']} 失败: {e_inner}")
 
             return results
 
         except Exception as e:
-            print(f"获取金属现货价格失败: {e}")
+            print(f"❌ 获取金属价格失败: {e}")
             return []
+

@@ -10,6 +10,7 @@ import akshare as ak
 from typing import Dict, Any
 
 from .cache import cached
+from .core.config import settings
 
 
 class PreciousMetalAnalysis:
@@ -20,7 +21,11 @@ class PreciousMetalAnalysis:
     SILVER_CODE = "SI00Y"  # COMEX白银主力
 
     @staticmethod
-    @cached("precious:gold_silver", ttl=300, stale_ttl=600)
+    @cached(
+        "precious:gold_silver",
+        ttl=settings.CACHE_TTL["gold_silver"],
+        stale_ttl=settings.CACHE_TTL["gold_silver"] * settings.STALE_TTL_RATIO,
+    )
     def get_gold_silver_ratio() -> Dict[str, Any]:
         """
         获取金银比及价格

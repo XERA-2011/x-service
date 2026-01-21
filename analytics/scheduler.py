@@ -315,6 +315,26 @@ def setup_default_warmup_jobs():
     )
 
     # =========================================================================
+    # 补充预热任务：QVIX 和北向资金
+    # =========================================================================
+
+    # QVIX 波动率指数 (交易时段 10分钟, 非交易 1小时)
+    scheduler.add_warmup_job(
+        job_id="warmup:sentiment:qvix",
+        func=lambda: warmup_cache(SentimentAnalysis.get_qvix_indices),
+        trading_interval_minutes=10,
+        non_trading_interval_minutes=60,
+    )
+
+    # 北向资金 (交易时段 5分钟, 非交易 1小时)
+    scheduler.add_warmup_job(
+        job_id="warmup:sentiment:north_funds",
+        func=lambda: warmup_cache(SentimentAnalysis.get_north_funds_sentiment),
+        trading_interval_minutes=5,
+        non_trading_interval_minutes=60,
+    )
+
+    # =========================================================================
     # 特殊任务：开盘前强制刷新 (仅交易日 9:25)
     # =========================================================================
     def pre_market_warmup():

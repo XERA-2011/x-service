@@ -59,10 +59,12 @@ class RedisCache:
                     raise ValueError("Redis URL is not configured.")
                 pool = ConnectionPool.from_url(
                     self.redis_url,
-                    max_connections=10,
+                    max_connections=50,
                     decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5,
+                    socket_connect_timeout=3,
+                    socket_timeout=3,
+                    retry_on_timeout=True,
+                    health_check_interval=30,
                 )
                 self._redis = redis.Redis(connection_pool=pool)
                 # 测试连接
@@ -138,10 +140,11 @@ class RedisCache:
         return 0
 
     def get_stats(self) -> dict:
-        """获取统计（包含命中率）"""
+        """获取统计（包含命中率、内存、慢查询等）"""
         if not self.connected:
             return {"connected": False, "error": "Redis 未连接"}
         try:
+            info = self.redis.info()
             memory_info = self.redis.info("memory")
             stats_info = self.redis.info("stats")
 
@@ -160,17 +163,39 @@ class RedisCache:
                 )
             )
 
+            # 获取慢查询日志
+            try:
+                slowlog = self.redis.slowlog_get(5)
+                slowlog_list = [
+                    {
+                        "id": entry.get("id"),
+                        "duration_us": entry.get("duration"),
+                        "command": " ".join(str(c) for c in entry.get("command", [])[:3]),
+                    }
+                    for entry in slowlog
+                ]
+            except Exception:
+                slowlog_list = []
+
             return {
                 "connected": True,
                 "version": CACHE_VERSION,
                 "keys_count": keys_count,
-                "hit_rate": f"{hit_rate}%",
-                "hits": hits,
-                "misses": misses,
                 "memory": {
-                    "used_memory_human": memory_info.get("used_memory_human"),
-                    "used_memory_peak_human": memory_info.get("used_memory_peak_human"),
+                    "used": memory_info.get("used_memory_human"),
+                    "peak": memory_info.get("used_memory_peak_human"),
+                    "fragmentation_ratio": memory_info.get("mem_fragmentation_ratio"),
+                    "maxmemory": info.get("maxmemory_human", "unlimited"),
+                    "maxmemory_policy": info.get("maxmemory_policy", "noeviction"),
                 },
+                "stats": {
+                    "hit_rate": f"{hit_rate}%",
+                    "hits": hits,
+                    "misses": misses,
+                    "evicted_keys": stats_info.get("evicted_keys", 0),
+                    "expired_keys": stats_info.get("expired_keys", 0),
+                },
+                "slowlog": slowlog_list,
             }
         except Exception as e:
             return {"connected": False, "error": str(e)}

@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 
 from .cache import cached
+from .core.config import settings
 
 
 class MarketAnalysis:
@@ -76,7 +77,11 @@ class MarketAnalysis:
         return summary
 
     @staticmethod
-    @cached("market:overview", ttl=2400, stale_ttl=3600)
+    @cached(
+        "market:overview",
+        ttl=settings.CACHE_TTL["market_overview"],
+        stale_ttl=settings.CACHE_TTL["market_overview"] * settings.STALE_TTL_RATIO,
+    )
     def get_market_overview_v2() -> Dict[str, Any]:
         """
         获取市场综合概览 (API 专用)
@@ -133,7 +138,11 @@ class MarketAnalysis:
         return result
 
     @staticmethod
-    @cached("market:sector_top", ttl=3600, stale_ttl=7200)
+    @cached(
+        "market:sector_top",
+        ttl=settings.CACHE_TTL["sector_top"],
+        stale_ttl=settings.CACHE_TTL["sector_top"] * settings.STALE_TTL_RATIO,
+    )
     def get_sector_top(n: int = 5) -> List[Dict]:
         """
         获取领涨行业
@@ -152,7 +161,11 @@ class MarketAnalysis:
             return []
 
     @staticmethod
-    @cached("market:board_cons", ttl=3600, stale_ttl=7200)
+    @cached(
+        "market:board_cons",
+        ttl=settings.CACHE_TTL["board_cons"],
+        stale_ttl=settings.CACHE_TTL["board_cons"] * settings.STALE_TTL_RATIO,
+    )
     def _get_board_cons(board_code: str) -> List[Dict]:
         """获取板块成分股（带缓存）"""
         try:
@@ -164,7 +177,11 @@ class MarketAnalysis:
         return []
 
     @staticmethod
-    @cached("market:sector_bottom", ttl=3600, stale_ttl=7200)
+    @cached(
+        "market:sector_bottom",
+        ttl=settings.CACHE_TTL["sector_bottom"],
+        stale_ttl=settings.CACHE_TTL["sector_bottom"] * settings.STALE_TTL_RATIO,
+    )
     def get_sector_bottom(n: int = 5) -> List[Dict]:
         """
         获取领跌行业 (并获取该行业内跌幅最大的股票)

@@ -8,6 +8,7 @@ from typing import Dict, Any
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import safe_float, get_beijing_time
+from ...core.data_provider import data_provider
 
 
 class CNMarketLeaders:
@@ -26,8 +27,8 @@ class CNMarketLeaders:
             领涨板块列表
         """
         try:
-            # 获取行业板块数据
-            df = ak.stock_board_industry_name_em()
+            # 使用共享数据提供层获取板块数据
+            df = data_provider.get_board_industry_name()
 
             if df.empty:
                 raise ValueError("无法获取行业板块数据")
@@ -85,8 +86,8 @@ class CNMarketLeaders:
             领跌板块列表
         """
         try:
-            # 获取行业板块数据
-            df = ak.stock_board_industry_name_em()
+            # 使用共享数据提供层获取板块数据
+            df = data_provider.get_board_industry_name()
 
             if df.empty:
                 raise ValueError("无法获取行业板块数据")
@@ -141,8 +142,8 @@ class CNMarketLeaders:
             行业板块排行数据
         """
         try:
-            # 获取行业板块数据
-            df = ak.stock_board_industry_name_em()
+            # 使用共享数据提供层获取板块数据
+            df = data_provider.get_board_industry_name()
 
             if df.empty:
                 raise ValueError("无法获取行业板块数据")

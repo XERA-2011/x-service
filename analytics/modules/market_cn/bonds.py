@@ -18,59 +18,110 @@ class CNBonds:
     @cached("market_cn:bonds", ttl=settings.CACHE_TTL["bonds"], stale_ttl=600)
     def get_treasury_yields() -> Dict[str, Any]:
         """
-        获取国债收益率数据
-
-        Returns:
-            国债收益率数据
+        获取国债收益率数据 (混合数据源)
         """
         try:
-            print("📊 获取国债收益率数据...")
-            # 获取国债收益率数据
-            df = ak.bond_zh_us_rate()
+            print("📊 获取国债收益率数据(主源)...")
+            
+            # 1. 主数据源: 中债国债收益率曲线 (覆盖大部分期限)
+            # 动态计算日期范围 (取最近3个月)
+            end_date = get_beijing_time()
+            start_date = end_date - pd.Timedelta(days=90)
+            
+            start_str = start_date.strftime("%Y%m%d")
+            end_str = end_date.strftime("%Y%m%d")
 
-            if df.empty:
-                raise ValueError("国债收益率数据为空")
+            df_primary = pd.DataFrame()
+            try:
+                df_primary = ak.bond_china_yield(start_date=start_str, end_date=end_str)
+                # 过滤只保留国债
+                if not df_primary.empty and "曲线名称" in df_primary.columns:
+                    df_primary = df_primary[df_primary["曲线名称"] == "中债国债收益率曲线"]
+                    # 排序
+                    if "日期" in df_primary.columns:
+                        df_primary["日期"] = pd.to_datetime(df_primary["日期"])
+                        df_primary = df_primary.sort_values("日期")
+            except Exception as e:
+                print(f"⚠️ 主数据源获取失败: {e}")
 
-            print(f"✅ 获取到国债数据，共 {len(df)} 条记录")
+            # 2. 补充数据源: Investing (用于补充 2年期 等缺失数据)
+            print("📊 获取国债收益率数据(补充源)...")
+            df_sec = pd.DataFrame()
+            try:
+                # 该接口虽然经常被封, 但包含关键的 2Y 数据
+                # 这里不抛出异常，失败了就只用主源
+                from ...core.utils import akshare_call_with_retry
+                df_sec = akshare_call_with_retry(ak.bond_zh_us_rate, max_retries=2)
+            except Exception as e:
+                print(f"⚠️ 补充数据源获取失败: {e}")
 
-            # 获取最新数据
-            latest_data = df.iloc[-1]
+            if df_primary.empty and df_sec.empty:
+                raise ValueError("所有国债数据源均不可用")
 
-            # 格式化收益率曲线
-            yield_curve = {
-                "1m": safe_float(latest_data.get("中国国债收益率1月", 0)),
-                "3m": safe_float(latest_data.get("中国国债收益率3月", 0)),
-                "6m": safe_float(latest_data.get("中国国债收益率6月", 0)),
-                "1y": safe_float(latest_data.get("中国国债收益率1年", 0)),
-                "2y": safe_float(latest_data.get("中国国债收益率2年", 0)),
-                "3y": safe_float(latest_data.get("中国国债收益率3年", 0)),
-                "5y": safe_float(latest_data.get("中国国债收益率5年", 0)),
-                "7y": safe_float(latest_data.get("中国国债收益率7年", 0)),
-                "10y": safe_float(latest_data.get("中国国债收益率10年", 0)),
-                "30y": safe_float(latest_data.get("中国国债收益率30年", 0)),
+            # 准备数据提取
+            # 主源最新数据
+            latest_pri = df_primary.iloc[-1] if not df_primary.empty else {}
+            prev_pri = df_primary.iloc[-2] if len(df_primary) > 1 else latest_pri
+            
+            # 补充源最新数据
+            latest_sec = df_sec.iloc[-1] if not df_sec.empty else {}
+            prev_sec = df_sec.iloc[-2] if len(df_sec) > 1 else latest_sec
+
+            # 映射表: key -> (主源列名, 补充源列名)
+            curve_mapping = {
+                "1m": ("1月", None),        # 1M 主源无，补充源无?
+                "3m": ("3月", None),
+                "6m": ("6月", None),
+                "1y": ("1年", None),
+                "2y": ("2年", "中国国债收益率2年"),  # 关键: 2Y 主源缺，补充源有
+                "3y": ("3年", "中国国债收益率3年"), # 注意补充源可能也没3y, 视column而定
+                "5y": ("5年", "中国国债收益率5年"),
+                "7y": ("7年", None),
+                "10y": ("10年", "中国国债收益率10年"),
+                "30y": ("30年", "中国国债收益率30年")
             }
 
-            # 计算收益率变化
-            if len(df) > 1:
-                prev_data = df.iloc[-2]
-                yield_changes = {}
-                for period in yield_curve.keys():
-                    current = yield_curve[period]
-                    previous = safe_float(
-                        prev_data.get(
-                            f"中国国债收益率{CNBonds._period_to_chinese(period)}",
-                            current,
-                        )
-                    )
-                    yield_changes[period] = round(current - previous, 4)
-            else:
-                yield_changes = {period: 0 for period in yield_curve.keys()}
+            yield_curve = {}
+            yield_changes = {}
+
+            for key, (col_pri, col_sec) in curve_mapping.items():
+                current_val = None
+                prev_val = None
+                
+                # 优先尝试主源
+                if col_pri and not df_primary.empty:
+                    val = latest_pri.get(col_pri)
+                    if pd.notna(val):
+                        current_val = safe_float(val, default=None)
+                        # 前值
+                        p_val = prev_pri.get(col_pri)
+                        prev_val = safe_float(p_val, default=None)
+
+                # 如果主源没有(或无效)，尝试补充源
+                if current_val is None and col_sec and not df_sec.empty:
+                    val = latest_sec.get(col_sec)
+                    if pd.notna(val):
+                        current_val = safe_float(val, default=None)
+                        # 前值
+                        p_val = prev_sec.get(col_sec)
+                        prev_val = safe_float(p_val, default=None)
+                
+                # 依然没有? 那就是真没有了 (如 1m)
+                yield_curve[key] = current_val
+                
+                # 计算涨跌 (如果都有值)
+                if current_val is not None and prev_val is not None:
+                    yield_changes[key] = round((current_val - prev_val) * 100, 2) # BP
+                else:
+                    yield_changes[key] = 0 # 或 None, 前端处理 0 也可以(无变化)
+
+            print(f"✅ 国债数据整合完成")
 
             # 分析收益率曲线形态
             curve_analysis = CNBonds._analyze_yield_curve(yield_curve)
 
             # 获取历史走势（最近30天）
-            history_data = CNBonds._get_yield_history(df)
+            history_data = CNBonds._get_yield_history(df_primary)
 
             return {
                 "yield_curve": yield_curve,
@@ -109,8 +160,8 @@ class CNBonds:
             if "error" in yield_data:
                 raise ValueError("无法获取收益率数据")
 
-            # 分析市场状况
-            analysis = {}
+            # 分析市场状况 (基于基础数据扩展)
+            analysis = yield_data.copy()
 
             # 1. 利率水平分析
             ten_year_yield = yield_data["key_rates"]["10y"]

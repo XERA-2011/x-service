@@ -9,8 +9,11 @@ from analytics.core.scheduler import setup_default_jobs, initial_warmup
 from analytics.api.market_cn import router as cn_market_router
 from analytics.api.metals import router as metals_router
 from analytics.api.market_us import router as us_market_router
+from analytics.core.patch import apply_patches
 import os
 
+# 应用 API 伪装补丁 (在最早的时机)
+apply_patches()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,7 +44,7 @@ async def lifespan(app: FastAPI):
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="x-analytics API v2.0",
+    title="x-analytics API",
     description="三大板块金融数据分析服务：沪港深市场、美股市场、有色金属",
     version="2.0.0",
     root_path="/analytics",

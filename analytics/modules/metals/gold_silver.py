@@ -1,91 +1,92 @@
 """
 金银比分析
 计算金银比及相关投资分析
+使用 COMEX 期货数据 (美元计价)
 """
 
 import akshare as ak
 from typing import Dict, Any, List
 from ...core.cache import cached
 from ...core.config import settings
-from ...core.utils import safe_float, get_beijing_time
+from ...core.utils import safe_float, get_beijing_time, akshare_call_with_retry
 
 
 class GoldSilverAnalysis:
-    """金银比分析"""
+    """金银比分析 (COMEX 美元计价)"""
+
+    # COMEX 合约代码
+    GOLD_CODE = "GC00Y"   # COMEX黄金主力
+    SILVER_CODE = "SI00Y"  # COMEX白银主力
+
+    # 历史统计 (数据来源: 50年历史数据)
+    HISTORICAL_HIGH = 123.8   # 2020年3月 COVID危机
+    HISTORICAL_LOW = 14.0     # 1980年1月 (白银投机泡沫)
+    HISTORICAL_AVG = 65.0     # 50年历史均值
 
     @staticmethod
     @cached("metals:gold_silver_ratio", ttl=settings.CACHE_TTL["metals"], stale_ttl=600)
     def get_gold_silver_ratio() -> Dict[str, Any]:
         """
-        获取金银比数据和分析
+        获取金银比数据和分析 (COMEX 美元计价)
         """
         try:
-            gold_price = 0
-            silver_price = 0
-            gold_change = 0
-            silver_change = 0
+            # 使用带重试的 API 调用
+            df = akshare_call_with_retry(ak.futures_global_spot_em)
 
-            try:
-                # 获取黄金 Au99.99
-                df_gold = ak.spot_quotations_sge(symbol="Au99.99")
-                if not df_gold.empty:
-                    latest_gold = df_gold.iloc[-1]
-                    gold_price = safe_float(latest_gold["现价"])  # 元/克
-                    # 估算涨跌
-                    if len(df_gold) > 1:
-                        open_gold = safe_float(df_gold.iloc[0]["现价"])
-                        if open_gold > 0:
-                            gold_change = (gold_price - open_gold) / open_gold * 100
+            if df.empty:
+                return {"error": "无法获取期货数据", "ratio": {"current": 0}}
 
-                # 获取白银 Ag(T+D)
-                # 注意：Ag(T+D) 是 元/千克
-                df_silver = ak.spot_quotations_sge(symbol="Ag(T+D)")
-                if not df_silver.empty:
-                    latest_silver = df_silver.iloc[-1]
-                    silver_price_kg = safe_float(latest_silver["现价"])  # 元/千克
-                    silver_price = silver_price_kg / 1000  # 换算为 元/克
-                    # 估算涨跌
-                    if len(df_silver) > 1:
-                        open_silver = safe_float(df_silver.iloc[0]["现价"])
-                        if open_silver > 0:
-                            silver_change = (
-                                (silver_price_kg - open_silver) / open_silver * 100
-                            )
+            # 获取黄金数据
+            gold_row = df[df["代码"] == GoldSilverAnalysis.GOLD_CODE]
+            silver_row = df[df["代码"] == GoldSilverAnalysis.SILVER_CODE]
 
-            except Exception as e_sge:
-                print(f"获取 SGE 数据失败: {e_sge}")
+            # 备用合约代码
+            if gold_row.empty:
+                gold_row = df[df["代码"].str.contains("GC2", na=False)].head(1)
+            if silver_row.empty:
+                silver_row = df[df["代码"].str.contains("SI2", na=False)].head(1)
+
+            if gold_row.empty or silver_row.empty:
+                return {"error": "无法获取黄金或白银数据", "ratio": {"current": 0}}
+
+            gold = gold_row.iloc[0]
+            silver = silver_row.iloc[0]
+
+            gold_price = safe_float(gold["最新价"])
+            silver_price = safe_float(silver["最新价"])
+            gold_change = safe_float(gold["涨跌幅"])
+            silver_change = safe_float(silver["涨跌幅"])
 
             if gold_price <= 0 or silver_price <= 0:
-                print(f"无法获取有效的金银价格: Gold={gold_price}, Silver={silver_price}")
-                return {"error": "数据源不可用", "ratio": {"current": 0}}
+                return {"error": "价格数据无效", "ratio": {"current": 0}}
 
             # 计算金银比 (无量纲)
             ratio = gold_price / silver_price
 
             # 分析
-            history_data = []  # 暂无历史
-            ratio_analysis = GoldSilverAnalysis._analyze_ratio_level(
-                ratio, history_data
-            )
+            ratio_analysis = GoldSilverAnalysis._analyze_ratio_level(ratio, [])
             investment_advice = GoldSilverAnalysis._get_investment_advice(
                 ratio, ratio_analysis
             )
 
             return {
                 "gold": {
-                    "price": gold_price,
+                    "price": round(gold_price, 2),
                     "change_pct": round(gold_change, 2),
-                    "unit": "元/克 (SGE参考)",
-                    "name": "黄金9999",
+                    "unit": "USD/oz",
+                    "name": "COMEX黄金",
                 },
                 "silver": {
-                    "price": silver_price * 1000,  # 还原为 元/千克 展示习惯
+                    "price": round(silver_price, 2),
                     "change_pct": round(silver_change, 2),
-                    "unit": "元/千克 (SGE参考)",
-                    "name": "白银T+D",
+                    "unit": "USD/oz",
+                    "name": "COMEX白银",
                 },
                 "ratio": {
                     "current": round(ratio, 2),
+                    "historical_high": GoldSilverAnalysis.HISTORICAL_HIGH,
+                    "historical_low": GoldSilverAnalysis.HISTORICAL_LOW,
+                    "historical_avg": GoldSilverAnalysis.HISTORICAL_AVG,
                     "analysis": ratio_analysis,
                     "investment_advice": investment_advice,
                 },
@@ -153,5 +154,5 @@ class GoldSilverAnalysis:
 金银比(Gold-Silver Ratio)说明：
 • 定义：黄金价格与白银价格的比值
 • 核心逻辑：比值过高暗示白银低估，比值过低暗示黄金低估
-• 数据来源：上海黄金交易所(SGE)现货价格
+• 数据来源：COMEX期货价格 (美元/盎司)
         """.strip()

@@ -3,22 +3,20 @@
 class App {
     constructor() {
         this.currentTab = 'market-cn';
-        this.refreshIntervals = new Map();
         this.lastUpdateTime = null;
-        this.isOnline = navigator.onLine;
-        this.isRefreshing = false; // 防止重复刷新
+        this.lastUpdateTime = null;
+        this.isRefreshing = false;
 
         this.init();
     }
 
     async init() {
-        console.log('🚀 x-analytics v2.0 启动中...');
+        console.log('🚀 x-analytics 启动中...');
 
         // 设置事件监听器
         this.setupEventListeners();
 
-        // 设置网络状态监听
-        this.setupNetworkListeners();
+
 
         // 初始化标签切换
         this.initTabSwitching();
@@ -32,10 +30,7 @@ class App {
         // 加载初始数据
         await this.loadInitialData();
 
-        // 设置自动刷新
-        this.setupAutoRefresh();
-
-        console.log('✅ x-analytics v2.0 启动完成');
+        console.log('✅ x-analytics 启动完成');
     }
 
     setupEventListeners() {
@@ -46,14 +41,7 @@ class App {
             }
         }, 250));
 
-        // 页面可见性变化
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.pauseAutoRefresh();
-            } else {
-                this.resumeAutoRefresh();
-            }
-        });
+
 
         // 键盘快捷键
         document.addEventListener('keydown', (event) => {
@@ -80,34 +68,7 @@ class App {
         });
     }
 
-    setupNetworkListeners() {
-        window.addEventListener('online', () => {
-            this.isOnline = true;
-            this.updateNetworkStatus();
-            this.refreshCurrentTab();
-            utils.showNotification('网络连接已恢复', 'success');
-        });
 
-        window.addEventListener('offline', () => {
-            this.isOnline = false;
-            this.updateNetworkStatus();
-            utils.showNotification('网络连接已断开', 'warning');
-        });
-    }
-
-    updateNetworkStatus() {
-        const statusIndicator = document.getElementById('status-indicator');
-        if (statusIndicator) {
-            const statusText = statusIndicator.querySelector('span:last-child');
-            if (this.isOnline) {
-                statusText.textContent = '实时';
-                statusIndicator.style.color = 'var(--success-color)';
-            } else {
-                statusText.textContent = '离线';
-                statusIndicator.style.color = 'var(--danger-color)';
-            }
-        }
-    }
 
     initTabSwitching() {
         const tabButtons = document.querySelectorAll('.tab-btn');
@@ -245,7 +206,7 @@ class App {
     }
 
     async refreshCurrentTab() {
-        if (!this.isOnline) {
+        if (!navigator.onLine) {
             console.log('离线状态，跳过数据刷新');
             return;
         }
@@ -253,10 +214,28 @@ class App {
         // 防止重复调用
         if (this.isRefreshing) {
             console.log('数据刷新中，跳过重复请求');
+            // utils.showNotification('正在刷新中，请稍候...', 'info');
             return;
         }
 
         this.isRefreshing = true;
+
+        // 更新按钮状态 - 获取当前激活标签页下的刷新按钮
+        const activeTab = document.querySelector('.tab-content.active');
+        const refreshBtn = activeTab ? activeTab.querySelector('.refresh-btn') : null;
+        let originalText = '';
+
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('refreshing');
+            const icon = refreshBtn.querySelector('i');
+            if (icon) icon.classList.add('spin');
+
+            // 保存并更新文本
+            originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i data-lucide="loader-2" class="spin" width="14"></i> 刷新中...';
+            if (window.lucide) lucide.createIcons();
+        }
 
         try {
             switch (this.currentTab) {
@@ -272,11 +251,26 @@ class App {
             }
 
             this.updateGlobalTime();
+            // 如果有刷新按钮，提示成功 -> 用户要求移除弹窗
+            // if (refreshBtn) {
+            //     utils.showNotification('刷新成功', 'success');
+            // }
         } catch (error) {
             console.error('刷新数据失败:', error);
             utils.showNotification('数据刷新失败', 'error');
         } finally {
             this.isRefreshing = false;
+
+            // 恢复按钮状态
+            if (refreshBtn && originalText) {
+                // 延迟一小会儿恢复，让用户看清成功状态
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.classList.remove('refreshing');
+                    refreshBtn.innerHTML = originalText;
+                    if (window.lucide) lucide.createIcons();
+                }, 500);
+            }
         }
     }
 
@@ -450,7 +444,7 @@ class App {
         } else {
             contentHtml += `
                 <div class="fg-desc">
-                    变动: ${utils.formatChange(data.change_1d || 0).text}
+                    变动: ${utils.formatChange(data.change_1d || 0, 2, 'us').text}
                 </div>
              `;
         }
@@ -484,7 +478,7 @@ class App {
 
         const html = data.map(item => {
             const change = item.change_pct;
-            const changeClass = change >= 0 ? 'text-up' : 'text-down';
+            const changeClass = change >= 0 ? 'text-up-us' : 'text-down-us';
 
             return `
                 <div class="heat-cell">
@@ -555,23 +549,22 @@ class App {
         }
 
         const html = indices.map(index => {
-            const change = utils.formatChange(index.change_pct);
+            const change = utils.formatChange(index.change_pct, 2, 'us');
             return `
-                <div class="stock-item index-item">
-                    <div class="stock-info">
-                        <div class="stock-name" style="font-size: 1.1em; font-weight: bold;">${index.name}</div>
-                        <div class="stock-code" style="color: #888;">${index.code}</div>
+                <div class="list-item">
+                    <div class="item-main">
+                        <span class="item-title">${index.name}</span>
+                        <span class="item-sub">${index.code}</span>
                     </div>
-                    <div class="stock-metrics">
-                        <div class="stock-price" style="font-size: 1.1em;">${Number(index.price).toFixed(2)}</div>
-                        <div class="stock-change ${change.class}">${change.text}</div>
+                    <div>
+                        <div class="item-value">${Number(index.price).toFixed(2)}</div>
+                        <div class="item-change ${change.class}">${change.text}</div>
                     </div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
-        container.classList.add('us-indices-grid');
 
         // Note: renderUSStockList is no longer used by this method
     }
@@ -587,7 +580,7 @@ class App {
         }
 
         const html = stocks.map(stock => {
-            const change = utils.formatChange(stock.change_pct);
+            const change = utils.formatChange(stock.change_pct, 2, 'us');
             return `
                 <div class="stock-item">
                     <div class="stock-info">
@@ -628,32 +621,25 @@ class App {
         if (!container) return;
 
         if (!data || data.length === 0) {
-            this.renderError('metal-prices', '暂无现货数据');
+            this.renderError('metal-prices', '暂无数据');
             return;
         }
 
-        const html = `
-            <table class="simple-table">
-                <thead>
-                    <tr>
-                        <th>名称</th>
-                        <th>价格</th>
-                        <th>单位</th>
-                        <th>涨跌幅</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.map(item => `
-                        <tr>
-                            <td class="item-title">${item.name}</td>
-                            <td class="text-mono">${utils.formatNumber(item.price)}</td>
-                            <td class="item-sub">${item.unit}</td>
-                            <td class="${utils.formatChange(item.change_pct).class} text-mono">${utils.formatChange(item.change_pct).text}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+        const html = data.map(item => {
+            const change = utils.formatChange(item.change_pct);
+            return `
+                <div class="list-item">
+                    <div class="item-main">
+                        <span class="item-title">${item.name}</span>
+                        <span class="item-sub">${item.unit}</span>
+                    </div>
+                    <div>
+                        <div class="item-value">$${utils.formatNumber(item.price)}</div>
+                        <div class="item-change ${change.class}">${change.text}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
         container.innerHTML = html;
     }
@@ -836,6 +822,7 @@ class App {
                 </div>
             `;
             container.innerHTML = html;
+            container.innerHTML = html;
         } else {
             const html = curveItems.map(item => `
                 <div class="bond-item">
@@ -845,6 +832,37 @@ class App {
             `).join('');
             container.innerHTML = html;
         }
+
+        // 渲染投资建议 (如果有)
+        // 渲染投资建议 (如果有)
+        // API returns investment_advice at root
+        const advice = data.investment_advice || (data.analysis ? data.analysis.investment_advice : null);
+
+        if (advice) {
+            const ratingColor = advice.overall_rating === '积极' ? 'var(--accent-red)' :
+                (advice.overall_rating === '谨慎' ? 'var(--accent-green)' : 'var(--text-secondary)');
+
+            const adviceHtml = `
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-light);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 600; font-size: 13px;">投资建议</span>
+                            <span style="font-size: 12px; font-weight: 700; color: ${ratingColor}; border: 1px solid ${ratingColor}; padding: 1px 6px; border-radius: 4px;">
+                                ${advice.overall_rating}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-primary); margin-bottom: 4px;">
+                            ${advice.allocation_suggestion || ''}
+                        </div>
+                        ${advice.risk_warning ? `
+                            <div style="font-size: 11px; color: var(--text-secondary);">
+                                <span style="color: var(--accent-green); margin-right: 4px;">⚠️</span> ${advice.risk_warning}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            container.insertAdjacentHTML('beforeend', adviceHtml);
+        }
+
     }
 
     renderGoldSilverRatio(data) {
@@ -859,42 +877,65 @@ class App {
         const ratio = data.ratio || {};
         const gold = data.gold || {};
         const silver = data.silver || {};
+        const advice = ratio.investment_advice || {};
+
+        const goldChange = utils.formatChange(gold.change_pct);
+        const silverChange = utils.formatChange(silver.change_pct);
 
         const html = `
-            <div class="ratio-display">
-                <div class="ratio-value" style="color: ${this.getRatioColor(ratio.current)}">${ratio.current}</div>
-                <div class="ratio-level">${ratio.analysis?.level || '--'}</div>
-                <div class="ratio-comment">${ratio.analysis?.comment || '--'}</div>
+            <div style="display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 400px;">
+                <!-- 1. 比值核心展示 -->
+                <div style="text-align: center;">
+                    <div class="fg-score" style="color: ${this.getRatioColor(ratio.current)}; font-size: 42px;">${ratio.current}</div>
+                    <div class="fg-level">${ratio.analysis?.level || '--'}</div>
+                    <div class="item-sub" style="margin-top: 4px;">${ratio.analysis?.comment || ''}</div>
+                </div>
+
+                <!-- 2. 价格展示 (左右分栏) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: 6px; text-align: center;">
+                        <div class="item-sub" style="margin-bottom: 4px;">黄金</div>
+                        <div class="heat-val" style="font-size: 16px;">$${utils.formatNumber(gold.price)}</div>
+                        <div class="${goldChange.class}" style="font-size: 12px; margin-top: 2px;">${goldChange.text}</div>
+                    </div>
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: 6px; text-align: center;">
+                        <div class="item-sub" style="margin-bottom: 4px;">白银</div>
+                        <div class="heat-val" style="font-size: 16px;">$${utils.formatNumber(silver.price)}</div>
+                        <div class="${silverChange.class}" style="font-size: 12px; margin-top: 2px;">${silverChange.text}</div>
+                    </div>
+                </div>
+
+                <!-- 3. 历史数据 (三列) -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; background: var(--bg-subtle); padding: 12px; border-radius: 6px;">
+                    <div>
+                        <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 2px;">历史最高</div>
+                        <div style="font-weight: 600;">${ratio.historical_high || '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 2px;">历史均值</div>
+                        <div style="font-weight: 600;">${ratio.historical_avg || '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 2px;">历史最低</div>
+                        <div style="font-weight: 600;">${ratio.historical_low || '--'}</div>
+                    </div>
+                </div>
+
+                <!-- 4. 投资建议 -->
+                ${advice.preferred_metal ? `
+                <div style="padding-top: 12px; border-top: 1px solid var(--border-light); font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+                    <div style="margin-bottom: 4px;"><strong>策略建议:</strong> <span style="color: var(--text-primary); font-weight: 600;">${advice.strategy}</span></div>
+                    <div>${advice.reasoning}</div>
+                </div>
+                ` : ''}
             </div>
-            <div class="metal-prices">
-                <div class="metal-price">
-                    <div class="metal-name">黄金</div>
-                    <div class="metal-value">$${utils.formatNumber(gold.price)}</div>
-                    <div class="metal-change ${gold.change_pct > 0 ? 'positive' : 'negative'}">
-                        ${gold.change_pct > 0 ? '+' : ''}${utils.formatPercentage(gold.change_pct)}
-                    </div>
-                </div>
-                <div class="metal-price">
-                    <div class="metal-name">白银</div>
-                    <div class="metal-value">$${utils.formatNumber(silver.price)}</div>
-                    <div class="metal-change ${silver.change_pct > 0 ? 'positive' : 'negative'}">
-                        ${silver.change_pct > 0 ? '+' : ''}${utils.formatPercentage(silver.change_pct)}
-                    </div>
-                </div>
-            </div>
-            ${ratio.investment_advice ? `
-                <div class="investment-advice">
-                    <div class="advice-title">投资建议</div>
-                    <div class="advice-content">
-                        推荐金属: <span class="advice-strategy">${ratio.investment_advice.preferred_metal}</span><br>
-                        策略: ${ratio.investment_advice.strategy}<br>
-                        ${ratio.investment_advice.reasoning}
-                    </div>
-                </div>
-            ` : ''}
         `;
 
+        // Ensure container centers the content
+        container.style.justifyContent = 'center';
         container.innerHTML = html;
+        // Reset text-align to default in case it was set by CSS class on desktop
+        container.style.textAlign = 'center';
     }
 
     renderError(containerId, message) {
@@ -962,37 +1003,6 @@ class App {
         this.lastUpdateTime = now;
     }
 
-    setupAutoRefresh() {
-        // 清除现有定时器
-        this.refreshIntervals.forEach(interval => clearInterval(interval));
-        this.refreshIntervals.clear();
-
-        // 设置不同频率的刷新
-        const intervals = {
-            'market-cn': 30000,  // 30秒
-            'market-us': 60000,  // 1分钟
-            'metals': 300000     // 5分钟
-        };
-
-        Object.entries(intervals).forEach(([tab, interval]) => {
-            const timer = setInterval(() => {
-                if (this.currentTab === tab && this.isOnline && !document.hidden) {
-                    this.refreshCurrentTab();
-                }
-            }, interval);
-
-            this.refreshIntervals.set(tab, timer);
-        });
-    }
-
-    pauseAutoRefresh() {
-        this.refreshIntervals.forEach(interval => clearInterval(interval));
-    }
-
-    resumeAutoRefresh() {
-        this.setupAutoRefresh();
-        this.refreshCurrentTab();
-    }
 }
 
 // 启动应用

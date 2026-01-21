@@ -9,6 +9,7 @@ from typing import Dict, Any
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import get_beijing_time
+from ...core.data_provider import data_provider
 
 
 class CNMarketHeat:
@@ -24,9 +25,9 @@ class CNMarketHeat:
             市场热度数据
         """
         try:
-            # 一次性获取股票数据，避免重复调用
+            # 使用共享数据提供层获取股票数据 (避免重复请求)
             print("📊 获取股票行情数据...")
-            df = ak.stock_zh_a_spot_em()
+            df = data_provider.get_stock_zh_a_spot()
 
             if df.empty:
                 raise ValueError("无法获取股票行情数据")
@@ -50,7 +51,7 @@ class CNMarketHeat:
 
             # 4. 计算综合热度指数
             heat_score = CNMarketHeat._calculate_heat_score(heat_data)
-            heat_data["heat_score"] = heat_score
+            heat_data["heat_score"] = round(heat_score, 1)  # 保留1位小数
             heat_data["heat_level"] = CNMarketHeat._get_heat_level(heat_score)
 
             heat_data["update_time"] = get_beijing_time().strftime("%Y-%m-%d %H:%M:%S")

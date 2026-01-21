@@ -12,13 +12,18 @@ from datetime import datetime
 from typing import Dict, Any
 
 from .cache import cached
+from .core.config import settings
 
 
 class SentimentAnalysis:
     """市场情绪分析类"""
 
     @staticmethod
-    @cached("sentiment:fear_greed", ttl=3600, stale_ttl=7200)
+    @cached(
+        "sentiment:fear_greed",
+        ttl=settings.CACHE_TTL["fear_greed"],
+        stale_ttl=settings.CACHE_TTL["fear_greed"] * settings.STALE_TTL_RATIO,
+    )
     def calculate_fear_greed_custom(symbol: str = "sh000001", days: int = 14) -> dict:
         """
         计算自定义恐慌贪婪指数 (基于 RSI 和 Bias)
@@ -139,7 +144,11 @@ class SentimentAnalysis:
             return {}
 
     @staticmethod
-    @cached("sentiment:qvix", ttl=600, stale_ttl=1200)
+    @cached(
+        "sentiment:qvix",
+        ttl=settings.CACHE_TTL["qvix"],
+        stale_ttl=settings.CACHE_TTL["qvix"] * settings.STALE_TTL_RATIO,
+    )
     def get_qvix_indices() -> Dict[str, float]:
         """
         获取中国波指 (QVIX) - 类 VIX 指数
@@ -196,7 +205,11 @@ class SentimentAnalysis:
             return pd.DataFrame()
 
     @staticmethod
-    @cached("sentiment:north_funds", ttl=300, stale_ttl=600)
+    @cached(
+        "sentiment:north_funds",
+        ttl=settings.CACHE_TTL["north_funds"],
+        stale_ttl=settings.CACHE_TTL["north_funds"] * settings.STALE_TTL_RATIO,
+    )
     def get_north_funds_sentiment() -> Dict[str, Any]:
         """
         获取北向资金情绪 (外资态度)

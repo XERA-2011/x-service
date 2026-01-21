@@ -9,6 +9,7 @@ from typing import Dict, Any, List
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import safe_float, get_beijing_time
+from ...core.data_provider import data_provider
 
 
 class CNDividendStrategy:
@@ -27,8 +28,8 @@ class CNDividendStrategy:
             红利低波股票数据
         """
         try:
-            # 获取股票基本信息
-            df = ak.stock_zh_a_spot_em()
+            # 使用共享数据提供层获取股票数据 (与 heat.py 共享)
+            df = data_provider.get_stock_zh_a_spot()
 
             if df.empty:
                 raise ValueError("无法获取股票数据")

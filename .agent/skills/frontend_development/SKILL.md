@@ -68,8 +68,28 @@ For series data (Yield Curves) that exceeds screen width.
 - Use Semantic Tags: `<header>`, `<main>`, `<section>`, `<footer>`.
 - **JS-Driven**: Keep HTML skeleton simple; render data-heavy content via JS.
 
-## 5. JavaScript Rendering
+## 5. JavaScript Rendering & Interaction
+
+### State Management
+- **Manual Refresh Only**: Do not use `setInterval` for auto-refreshing data.
+- **Loading States**: UI must show immediate feedback (spinners/skeleton) upon user action.
+
+### Data Formatting
+- **Null Handling**: Missing data (`null`/`undefined`) must render as `--`. Never show `0` or `NaN`.
+- **Formatters**:
+  - Use `utils.formatNumber(val)` for general stats.
+  - Use `utils.formatPercentage(val)` for rates/ratios.
+  - Use `utils.formatTime(ts)` for timestamps.
+
+### Market-Specific Colors
+- **CN / Metals / Crypto**:
+  - Up (涨): **Red** (`var(--accent-red)`) `.text-up`
+  - Down (跌): **Green** (`var(--accent-green)`) `.text-down`
+- **US Market**:
+  - Up (Gain): **Green** (`var(--accent-green)`) `.text-up-us`
+  - Down (Loss): **Red** (`var(--accent-red)`) `.text-down-us`
+
+### DOM Manipulation
 - **Class Coupling**: JS render functions must use classes defined in `styles.css`.
-- **Error Handling**: Always display visual feedback (e.g., `<div class="loading">` or error message).
-- **Formatters**: Use `utils.formatNumber` and `utils.formatPercentage` for consistent data display.
+- **Injection**: Use `innerHTML` with template literals for list rendering; ensure content is escaped if user-generated (not applicable for internal API data).
 

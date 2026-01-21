@@ -82,7 +82,7 @@ def get_dividend_etfs() -> Dict[str, Any]:
 def get_treasury_yields() -> Dict[str, Any]:
     """获取国债收益率曲线"""
     try:
-        return CNBonds.get_treasury_yields()
+        return CNBonds.get_bond_market_analysis()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

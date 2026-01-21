@@ -6,9 +6,9 @@ class Utils {
         if (value === null || value === undefined || isNaN(value)) {
             return '--';
         }
-        
+
         const num = parseFloat(value);
-        
+
         if (Math.abs(num) >= 1e8) {
             return `${(num / 1e8).toFixed(precision)}亿`;
         } else if (Math.abs(num) >= 1e4) {
@@ -23,30 +23,39 @@ class Utils {
         if (value === null || value === undefined || isNaN(value)) {
             return '--';
         }
-        
+
         const num = parseFloat(value);
         const formatted = num.toFixed(precision);
         return `${formatted}%`;
     }
 
-    // 格式化价格变化
-    static formatChange(value, precision = 2) {
+    // 格式化价格变化 (支持不同市场颜色: us=绿涨红跌, cn/metals=红涨绿跌)
+    static formatChange(value, precision = 2, market = 'cn') {
         if (value === null || value === undefined || isNaN(value)) {
             return { text: '--', class: '' };
         }
-        
+
         const num = parseFloat(value);
         const formatted = num.toFixed(precision);
         const text = num > 0 ? `+${formatted}%` : `${formatted}%`;
-        const className = num > 0 ? 'positive' : num < 0 ? 'negative' : '';
-        
+
+        // 根据市场确定颜色方案
+        let className = '';
+        if (market === 'us') {
+            // 美股: 绿涨红跌
+            className = num > 0 ? 'text-up-us' : num < 0 ? 'text-down-us' : '';
+        } else {
+            // 沪港深/金属: 红涨绿跌
+            className = num > 0 ? 'text-up' : num < 0 ? 'text-down' : '';
+        }
+
         return { text, class: className };
     }
 
     // 格式化时间
     static formatTime(timestamp) {
         if (!timestamp) return '--';
-        
+
         try {
             const date = new Date(timestamp);
             return date.toLocaleString('zh-CN', {
@@ -65,7 +74,7 @@ class Utils {
     // 格式化相对时间
     static formatRelativeTime(timestamp) {
         if (!timestamp) return '--';
-        
+
         try {
             const now = new Date();
             const date = new Date(timestamp);
@@ -74,7 +83,7 @@ class Utils {
             const minutes = Math.floor(seconds / 60);
             const hours = Math.floor(minutes / 60);
             const days = Math.floor(hours / 24);
-            
+
             if (days > 0) return `${days}天前`;
             if (hours > 0) return `${hours}小时前`;
             if (minutes > 0) return `${minutes}分钟前`;
@@ -100,7 +109,7 @@ class Utils {
     // 节流函数
     static throttle(func, limit) {
         let inThrottle;
-        return function(...args) {
+        return function (...args) {
             if (!inThrottle) {
                 func.apply(this, args);
                 inThrottle = true;
@@ -151,7 +160,7 @@ class Utils {
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
-        
+
         // 添加样式
         Object.assign(notification.style, {
             position: 'fixed',
@@ -167,7 +176,7 @@ class Utils {
             transform: 'translateX(100%)',
             transition: 'all 0.3s ease-out'
         });
-        
+
         // 设置背景色
         const colors = {
             info: '#3b82f6',
@@ -176,16 +185,16 @@ class Utils {
             error: '#ef4444'
         };
         notification.style.backgroundColor = colors[type] || colors.info;
-        
+
         // 添加到页面
         document.body.appendChild(notification);
-        
+
         // 显示动画
         setTimeout(() => {
             notification.style.opacity = '1';
             notification.style.transform = 'translateX(0)';
         }, 10);
-        
+
         // 自动移除
         setTimeout(() => {
             notification.style.opacity = '0';
@@ -222,7 +231,7 @@ class Utils {
                 return false;
             }
         },
-        
+
         get(key, defaultValue = null) {
             try {
                 const item = localStorage.getItem(key);
@@ -232,7 +241,7 @@ class Utils {
                 return defaultValue;
             }
         },
-        
+
         remove(key) {
             try {
                 localStorage.removeItem(key);
@@ -242,7 +251,7 @@ class Utils {
                 return false;
             }
         },
-        
+
         clear() {
             try {
                 localStorage.clear();
@@ -262,7 +271,7 @@ class Utils {
             if (value < 0) return '#ef4444'; // 红色
             return '#6b7280'; // 灰色
         },
-        
+
         // 根据百分比获取渐变色
         getGradientColor(percentage, startColor = '#ef4444', endColor = '#10b981') {
             // 简化实现，实际可以使用更复杂的颜色插值

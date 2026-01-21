@@ -98,3 +98,76 @@ def generate_cache_key(*args) -> str:
     """生成缓存键"""
     key_parts = [settings.CACHE_PREFIX] + [str(arg) for arg in args]
     return ":".join(key_parts)
+
+
+def akshare_call_with_retry(
+    func,
+    *args,
+    max_retries: int = 5,
+    base_delay: float = 2.0,
+    use_throttle: bool = True,
+    **kwargs
+):
+    """
+    带重试机制的 AkShare API 调用
+
+    Args:
+        func: AkShare 函数
+        *args: 函数参数
+        max_retries: 最大重试次数
+        base_delay: 基础延迟时间(秒)
+        use_throttle: 是否使用全局节流器
+        **kwargs: 函数关键字参数
+
+    Returns:
+        API 调用结果
+
+    Raises:
+        Exception: 所有重试失败后抛出最后一个异常
+    """
+    import time
+    from .throttler import throttler
+
+    last_exception = None
+
+    for attempt in range(max_retries):
+        try:
+            # 使用节流器控制请求频率
+            if use_throttle:
+                throttler.wait_if_needed()
+
+            return func(*args, **kwargs)
+        except Exception as e:
+            last_exception = e
+            error_msg = str(e)
+
+            # 检查是否是连接类错误（需要重试）
+            is_connection_error = any(
+                keyword in error_msg.lower()
+                for keyword in [
+                    "connection",
+                    "timeout",
+                    "disconnected",
+                    "reset",
+                    "refused",
+                    "aborted",
+                ]
+            )
+
+            if not is_connection_error:
+                # 非连接错误，直接抛出
+                raise
+
+            if attempt < max_retries - 1:
+                # 指数退避: 1s, 2s, 4s
+                delay = base_delay * (2 ** attempt)
+                print(
+                    f"⚠️ API调用失败 (尝试 {attempt + 1}/{max_retries}): {error_msg}"
+                )
+                print(f"   {delay:.1f}秒后重试...")
+                time.sleep(delay)
+            else:
+                print(f"❌ API调用失败 (已重试{max_retries}次): {error_msg}")
+
+    raise last_exception  # type: ignore
+

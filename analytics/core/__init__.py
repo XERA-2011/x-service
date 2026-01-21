@@ -6,6 +6,9 @@ x-analytics 核心模块
 from .cache import cache
 from .scheduler import scheduler
 from .config import settings
+from .throttler import throttler
+from .data_provider import data_provider
 from .utils import *
 
-__all__ = ["cache", "scheduler", "settings"]
+__all__ = ["cache", "scheduler", "settings", "throttler", "data_provider"]
+

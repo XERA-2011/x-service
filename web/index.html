@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>x-analytics v2.0</title>
+    <title>x-analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -18,7 +18,7 @@
 <body>
     <header class="navbar">
         <div class="navbar-content">
-            <div class="brand">x-analytics <span class="badge">v2.0</span></div>
+            <div class="brand">x-analytics</div>
             <div class="refresh-badge">
                 <span class="pulse-dot"></span>
                 <span id="global-update-time">Ready</span>
@@ -44,7 +44,8 @@
         <section class="tab-content active" id="market-cn">
             <div class="section-header">
                 <h2 class="section-title">沪港深指数</h2>
-                <div class="refresh-badge"><span id="cn-refresh-interval">30s</span> 刷新</div>
+                <button class="refresh-btn" onclick="window.app.refreshCurrentTab()" title="点击刷新"><i
+                        data-lucide="refresh-cw" width="14"></i> 刷新</button>
             </div>
 
             <div class="grid">
@@ -115,7 +116,8 @@
         <section class="tab-content" id="market-us">
             <div class="section-header">
                 <h2 class="section-title">美股市场</h2>
-                <div class="refresh-badge"><span id="us-refresh-interval">1m</span> 刷新</div>
+                <button class="refresh-btn" onclick="window.app.refreshCurrentTab()" title="点击刷新"><i
+                        data-lucide="refresh-cw" width="14"></i> 刷新</button>
             </div>
 
             <div class="grid">
@@ -177,7 +179,8 @@
         <section class="tab-content" id="metals">
             <div class="section-header">
                 <h2 class="section-title">贵金属</h2>
-                <div class="refresh-badge"><span id="metals-refresh-interval">5m</span> 刷新</div>
+                <button class="refresh-btn" onclick="window.app.refreshCurrentTab()" title="点击刷新"><i
+                        data-lucide="refresh-cw" width="14"></i> 刷新</button>
             </div>
 
             <div class="grid">
@@ -192,7 +195,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">现货价格</div>
+                        <div class="card-title">主流金属</div>
                     </div>
                     <div id="metal-prices" class="list-container">
                         <div class="loading">Loading...</div>
