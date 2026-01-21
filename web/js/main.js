@@ -422,44 +422,47 @@ class App {
         if (!container) return;
 
         if (!data || data.error) {
-            container.innerHTML = '<div class="placeholder"><p>暂无数据</p></div>';
+            container.innerHTML = '<div class="loading">暂无数据</div>';
             return;
         }
 
         const score = data.current_value || data.score || 50;
         const level = data.current_level || data.level || '中性';
-        const date = data.date ? data.date.substring(0, 10) : '';
         const indicators = data.indicators;
 
         let contentHtml = `
-            <div class="fear-greed-display">
+            <div class="fg-gauge" id="${containerId}-gauge"></div>
+            <div class="fg-info">
                 <div class="fg-score class-${this.getScoreClass(score)}">${score}</div>
                 <div class="fg-level">${level}</div>
         `;
 
         if (indicators) {
-            let indicatorsHtml = '<div class="fg-indicators">';
+            contentHtml += `<div class="fg-desc" style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;">`;
             for (const [key, val] of Object.entries(indicators)) {
-                indicatorsHtml += `
-                    <div class="fg-badge">
-                        <span>${this.getIndicatorName(key)}</span>
-                        <span class="${utils.formatChange(val.score - 50).class}">${Math.round(val.score)}</span>
-                    </div>
+                contentHtml += `
+                    <span class="badge" title="${this.getIndicatorName(key)}">
+                       ${Math.round(val.score)}
+                    </span>
                  `;
             }
-            indicatorsHtml += '</div>';
-            contentHtml += indicatorsHtml;
+            contentHtml += `</div>`;
         } else {
             contentHtml += `
-                <div class="fg-meta">
-                    <span>日变动: ${utils.formatChange(data.change_1d || 0).text}</span>
-                    <span>更新: ${date}</span>
+                <div class="fg-desc">
+                    变动: ${utils.formatChange(data.change_1d || 0).text}
                 </div>
              `;
         }
 
-        contentHtml += '</div>';
+        contentHtml += '</div>'; // Close fg-info
+
         container.innerHTML = contentHtml;
+
+        // Init gauge
+        setTimeout(() => {
+            charts.createFearGreedGauge(`${containerId}-gauge`, { score: score, level: level });
+        }, 100);
     }
 
     getScoreClass(score) {
@@ -481,20 +484,18 @@ class App {
 
         const html = data.map(item => {
             const change = item.change_pct;
-            // No background color, just text color class
             const changeClass = change >= 0 ? 'text-up' : 'text-down';
 
-            // Minimalist Block
             return `
-                <div class="heat-metric">
-                    <div class="metric-label">${item.name}</div>
-                    <div class="metric-value ${changeClass}">${utils.formatPercentage(change)}</div>
+                <div class="heat-cell">
+                    <div class="item-sub">${item.name}</div>
+                    <div class="heat-val ${changeClass}">${utils.formatPercentage(change)}</div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
-        container.className = 'heat-metrics'; // Use the grid class defined in components.css
+        container.className = 'heat-grid';
     }
 
     renderUSBondYields(data) {
@@ -514,7 +515,7 @@ class App {
             return `
                 <div class="bond-item">
                     <span class="bond-name">${item.name}</span>
-                    <span class="bond-val ${valClass}">${item.value}${item.suffix || ''}</span>
+                    <span class="bond-rate ${valClass}">${item.value}${item.suffix || ''}</span>
                 </div>
             `;
         }).join('');
@@ -640,10 +641,10 @@ class App {
                 <tbody>
                     ${data.map(item => `
                         <tr>
-                            <td>${item.name}</td>
-                            <td>${utils.formatNumber(item.price)}</td>
-                            <td>${item.unit}</td>
-                            <td class="${utils.formatChange(item.change_pct).class}">${utils.formatChange(item.change_pct).text}</td>
+                            <td class="item-title">${item.name}</td>
+                            <td class="text-mono">${utils.formatNumber(item.price)}</td>
+                            <td class="item-sub">${item.unit}</td>
+                            <td class="${utils.formatChange(item.change_pct).class} text-mono">${utils.formatChange(item.change_pct).text}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -663,23 +664,14 @@ class App {
             return;
         }
 
-        // 创建仪表盘
-        const gaugeContainer = document.createElement('div');
-        gaugeContainer.className = 'fear-greed-gauge';
-        gaugeContainer.id = 'cn-fear-greed-gauge';
-
-        // 创建信息显示
-        const infoContainer = document.createElement('div');
-        infoContainer.className = 'fear-greed-info';
-        infoContainer.innerHTML = `
-            <div class="fear-greed-score">${data.score}</div>
-            <div class="fear-greed-level">${data.level}</div>
-            <div class="fear-greed-description">${data.description}</div>
+        container.innerHTML = `
+            <div class="fg-gauge" id="cn-fear-greed-gauge"></div>
+            <div class="fg-info">
+                <div class="fg-score class-${this.getScoreClass(data.score)}">${data.score}</div>
+                <div class="fg-level">${data.level}</div>
+                <div class="fg-desc">${data.description}</div>
+            </div>
         `;
-
-        container.innerHTML = '';
-        container.appendChild(gaugeContainer);
-        container.appendChild(infoContainer);
 
         // 创建图表
         setTimeout(() => {
@@ -697,24 +689,21 @@ class App {
         if (!container) return;
 
         if (!sectors || sectors.length === 0) {
-            container.innerHTML = '<div class="placeholder"><p>暂无数据</p></div>';
+            container.innerHTML = '<div class="loading">暂无数据</div>';
             return;
         }
 
         const html = sectors.map(sector => {
             const change = utils.formatChange(sector.change_pct);
             return `
-                <div class="stock-item">
-                    <div class="stock-info">
-                        <div class="stock-name">${sector.name}</div>
-                        <div class="stock-code">
-                            ${sector.stock_count}家公司 | 
-                            ${sector.leading_stock ? `领涨: ${sector.leading_stock}` : ''}
-                        </div>
+                <div class="list-item">
+                    <div class="item-main">
+                        <span class="item-title">${sector.name}</span>
+                        <span class="item-sub">${sector.stock_count}家 | 领涨: ${sector.leading_stock || '--'}</span>
                     </div>
-                    <div class="stock-metrics">
-                        <div class="stock-price">${utils.formatNumber(sector.total_market_cap / 100000000)}亿</div>
-                        <div class="stock-change ${change.class}">${change.text}</div>
+                    <div>
+                        <div class="item-value">${utils.formatNumber(sector.total_market_cap / 100000000)}亿</div>
+                        <div class="item-change ${change.class}">${change.text}</div>
                     </div>
                 </div>
             `;
@@ -732,31 +721,23 @@ class App {
             return;
         }
 
-        // Minimalist Output: Score + Grid
+        // Using Grid for metrics
         const html = `
-            <div class="market-heat-container">
-                <div class="heat-score-section">
-                    <div class="heat-score">${data.heat_score}</div>
-                    <div class="heat-level">${data.heat_level}</div>
-                </div>
-                <div class="heat-metrics">
-                    <div class="heat-metric">
-                        <div class="metric-label">成交额</div>
-                        <div class="metric-value">${utils.formatNumber(data.total_turnover)}亿</div>
-                    </div>
-                    <div class="heat-metric">
-                        <div class="metric-label">涨跌比</div>
-                        <div class="metric-value">${data.rise_fall_ratio}</div>
-                    </div>
-                    <div class="heat-metric">
-                        <div class="metric-label">强势股</div>
-                        <div class="metric-value">${data.strong_stocks}</div>
-                    </div>
-                    <div class="heat-metric">
-                        <div class="metric-label">活跃度</div>
-                        <div class="metric-value">${data.activity_level}</div>
-                    </div>
-                </div>
+            <div class="heat-cell">
+                <div class="fg-score">${data.heat_score}</div>
+                <div class="fg-level">${data.heat_level}</div>
+            </div>
+            <div class="heat-cell">
+                <div class="item-sub">成交额</div>
+                <div class="heat-val">${utils.formatNumber(data.total_turnover)}亿</div>
+            </div>
+            <div class="heat-cell">
+                <div class="item-sub">涨跌比</div>
+                <div class="heat-val">${data.rise_fall_ratio}</div>
+            </div>
+            <div class="heat-cell">
+                <div class="item-sub">强势股</div>
+                <div class="heat-val">${data.strong_stocks}</div>
             </div>
         `;
 
@@ -773,77 +754,82 @@ class App {
         }
 
         const stats = data.strategy_stats || {};
-        const html = `
-            <div class="dividend-stats">
-                <div class="dividend-stat">
-                    <div class="stat-label">平均股息率</div>
-                    <div class="stat-value">${utils.formatPercentage(stats.avg_dividend_yield)}</div>
+
+        // Stats in a simple grid
+        const statsHtml = `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                <div>
+                    <div class="item-sub">均股息</div>
+                    <div class="heat-val">${utils.formatPercentage(stats.avg_dividend_yield)}</div>
                 </div>
-                <div class="dividend-stat">
-                    <div class="stat-label">平均PE</div>
-                    <div class="stat-value">${utils.formatNumber(stats.avg_pe_ratio)}</div>
+                <div>
+                    <div class="item-sub">均PE</div>
+                    <div class="heat-val">${utils.formatNumber(stats.avg_pe_ratio)}</div>
                 </div>
-                <div class="dividend-stat">
-                    <div class="stat-label">低波动股</div>
-                    <div class="stat-value">${stats.low_volatility_count || 0}</div>
+                <div>
+                    <div class="item-sub">低波股</div>
+                    <div class="heat-val">${stats.low_volatility_count || 0}</div>
                 </div>
-            </div>
-            <div class="dividend-stocks">
-                ${data.stocks.slice(0, 10).map(stock => `
-                    <div class="dividend-stock">
-                        <div class="dividend-info">
-                            <div class="dividend-name">${stock.name}</div>
-                            <div class="dividend-code">${stock.code}</div>
-                        </div>
-                        <div class="dividend-metrics">
-                            <div class="dividend-yield">${utils.formatPercentage(stock.estimated_dividend_yield)}</div>
-                            <div class="dividend-pe">PE ${utils.formatNumber(stock.pe_ratio)}</div>
-                        </div>
-                    </div>
-                `).join('')}
             </div>
         `;
 
-        container.innerHTML = html;
+        const listHtml = data.stocks.slice(0, 10).map(stock => `
+            <div class="list-item">
+                <div class="item-main">
+                    <span class="item-title">${stock.name}</span>
+                    <span class="item-sub">${stock.code}</span>
+                </div>
+                <div>
+                    <div class="item-value" style="color: var(--accent-red)">${utils.formatPercentage(stock.estimated_dividend_yield)}</div>
+                    <div class="item-change">PE ${utils.formatNumber(stock.pe_ratio)}</div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = statsHtml + listHtml;
     }
 
     renderCNBonds(data) {
         const container = document.getElementById('cn-bonds');
         if (!container) return;
 
-        if (data.error) {
-            this.renderError('cn-bonds', data.error);
+        if (!data || data.length === 0) {
+            this.renderError('cn-bonds', '暂无数据');
             return;
         }
 
-        const yieldCurve = data.yield_curve || {};
-        const keyRates = data.key_rates || {};
+        // Check data structure (support both simple array and yield_curve object)
+        const yieldCurve = Array.isArray(data) ? data : (data.yield_curve || []);
 
-        const html = `
-            <div class="yield-curve">
-                ${Object.entries(yieldCurve).map(([period, rate]) => {
-            const change = data.yield_changes?.[period] || 0;
-            const changeClass = change > 0 ? 'positive' : change < 0 ? 'negative' : '';
-            return `
-                        <div class="yield-item">
-                            <div class="yield-period">${period.toUpperCase()}</div>
-                            <div class="yield-rate">${utils.formatPercentage(rate)}</div>
-                            <div class="yield-change ${changeClass}">
-                                ${change > 0 ? '+' : ''}${utils.formatNumber(change, 3)}
-                            </div>
+        // If it's the complex object structure
+        if (data.key_rates) {
+            const html = `
+                <div class="bond-scroll">
+                    ${yieldCurve.map(item => `
+                        <div class="bond-item">
+                            <span class="bond-name">${item.period}</span>
+                            <span class="bond-rate">${item.yield}%</span>
+                             <span class="bond-change ${utils.formatChange(item.change_bp).class}" style="font-size: 10px; display: block;">
+                                ${item.change_bp > 0 ? '+' : ''}${item.change_bp}bp
+                            </span>
                         </div>
-                    `;
-        }).join('')}
-            </div>
-            <div class="bond-analysis">
-                <div class="analysis-title">10年期国债: ${utils.formatPercentage(keyRates['10y'])}</div>
-                <div class="analysis-content">
-                    期限利差 (10Y-2Y): ${utils.formatNumber(keyRates.spread_10y_2y, 3)}%
+                    `).join('')}
                 </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
+                <div style="font-size: 12px; padding: 8px; color: var(--text-secondary); border-top: 1px solid var(--border-light);">
+                    10年期: ${utils.formatPercentage(data.key_rates['10y'])} | 期限利差: ${utils.formatNumber(data.key_rates.spread_10y_2y, 3)}%
+                </div>
+            `;
+            container.innerHTML = html;
+        } else {
+            // Simple array structure fallback
+            const html = yieldCurve.map(item => `
+                <div class="bond-item">
+                    <span class="bond-name">${item.name || item.period}</span>
+                    <span class="bond-rate">${item.value || item.yield}%</span>
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
     }
 
     renderGoldSilverRatio(data) {

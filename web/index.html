@@ -4,349 +4,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>x-analytics v2.0 - 三大板块金融数据分析</title>
-    <meta name="description" content="沪港深市场、美股市场、有色金属三大板块实时数据分析平台">
-
-    <!-- Fonts -->
+    <title>x-analytics v2.0</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
-
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 
 <body>
-    <!-- 顶部导航 -->
     <header class="navbar">
         <div class="navbar-content">
-            <div class="navbar-brand">
-                <span class="brand-text">x-analytics</span>
-                <span class="version-badge">v2.0</span>
-            </div>
-            <div class="navbar-info">
-                <span class="update-time" id="global-update-time">加载中...</span>
-                <div class="status-indicator" id="status-indicator">
-                    <span class="pulse-dot"></span>
-                    <span>实时</span>
-                </div>
+            <div class="brand">x-analytics <span class="badge">v2.0</span></div>
+            <div class="refresh-badge">
+                <span class="pulse-dot"></span>
+                <span id="global-update-time">Ready</span>
             </div>
         </div>
     </header>
 
-    <!-- 主要内容 -->
     <main class="main-container">
-        <!-- 板块切换导航 -->
-        <nav class="tab-navigation">
+        <!-- Tabs -->
+        <nav class="tabs">
             <button class="tab-btn active" data-tab="market-cn">
-                <i data-lucide="trending-up"></i>
-                沪港深指数
+                <i data-lucide="trending-up" width="16"></i> 沪港深
             </button>
             <button class="tab-btn" data-tab="market-us">
-                <i data-lucide="dollar-sign"></i>
-                美股纳指标普
+                <i data-lucide="dollar-sign" width="16"></i> 美股
             </button>
             <button class="tab-btn" data-tab="metals">
-                <i data-lucide="coins"></i>
-                有色金属
+                <i data-lucide="coins" width="16"></i> 金属
             </button>
         </nav>
 
-        <!-- 沪港深市场板块 -->
+        <!-- CN Market -->
         <section class="tab-content active" id="market-cn">
             <div class="section-header">
-                <h2>沪港深指数</h2>
-                <div class="refresh-info">
-                    <span class="refresh-badge">
-                        <span class="pulse-dot"></span>
-                        <span id="cn-refresh-interval">30秒</span> 刷新
-                    </span>
-                </div>
+                <h2 class="section-title">沪港深指数</h2>
+                <div class="refresh-badge"><span id="cn-refresh-interval">30s</span> 刷新</div>
             </div>
 
-            <div class="dashboard-grid">
-                <!-- 恐慌贪婪指数 -->
-                <div class="card card-hero">
+            <div class="grid">
+                <!-- Fear & Greed -->
+                <div class="card hero">
                     <div class="card-header">
-                        <span>恐慌贪婪指数</span>
-                        <button class="info-btn" data-tooltip="基于价格动量、波动率、RSI等指标计算">
-                            <i data-lucide="info"></i>
-                        </button>
+                        <div class="card-title"><i data-lucide="activity" width="16"></i> 恐慌贪婪</div>
                     </div>
-                    <div class="card-body">
-                        <div id="cn-fear-greed" class="fear-greed-container">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <!-- fg-container -->
+                    <div id="cn-fear-greed" class="fg-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 领涨板块 -->
+                <!-- Gainers -->
                 <div class="card">
                     <div class="card-header">
-                        <span>领涨板块</span>
+                        <div class="card-title">领涨板块</div>
                     </div>
-                    <div class="card-body">
-                        <div id="cn-gainers" class="leaders-list">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="cn-gainers" class="list-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 领跌板块 -->
+                <!-- Losers -->
                 <div class="card">
                     <div class="card-header">
-                        <span>领跌板块</span>
+                        <div class="card-title">领跌板块</div>
                     </div>
-                    <div class="card-body">
-                        <div id="cn-losers" class="leaders-list">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="cn-losers" class="list-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 市场热度 -->
+                <!-- Market Heat -->
                 <div class="card">
                     <div class="card-header">
-                        <span>市场热度</span>
+                        <div class="card-title">市场热度</div>
                     </div>
-                    <div class="card-body">
-                        <div id="market-cn-heat" class="market-heat-container">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="market-cn-heat" class="heat-grid">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 红利低波 -->
+                <!-- Dividend -->
                 <div class="card">
                     <div class="card-header">
-                        <span>红利低波策略</span>
-                        <button class="info-btn" data-tooltip="高股息率+低波动率股票筛选">
-                            <i data-lucide="info"></i>
-                        </button>
+                        <div class="card-title">红利策略</div>
                     </div>
-                    <div class="card-body">
-                        <div id="cn-dividend" class="dividend-container">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="cn-dividend" class="list-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 国债收益率 -->
+                <!-- Bonds -->
                 <div class="card">
                     <div class="card-header">
-                        <span>国债收益率</span>
+                        <div class="card-title">国债收益率</div>
                     </div>
-                    <div class="card-body">
-                        <div id="cn-bonds" class="bonds-container">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="cn-bonds" class="bond-scroll">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 美股市场板块 -->
+        <!-- US Market -->
         <section class="tab-content" id="market-us">
             <div class="section-header">
-                <h2>美股纳指标普</h2>
-                <div class="refresh-info">
-                    <span class="refresh-badge">
-                        <span class="pulse-dot"></span>
-                        <span id="us-refresh-interval">1分钟</span> 刷新
-                    </span>
-                </div>
+                <h2 class="section-title">美股市场</h2>
+                <div class="refresh-badge"><span id="us-refresh-interval">1m</span> 刷新</div>
             </div>
 
-            <div class="dashboard-grid">
-                <!-- 美股恐慌贪婪指数 -->
-                <div class="card card-hero">
+            <div class="grid">
+                <!-- US Fear & Greed -->
+                <div class="card hero">
                     <div class="card-header">
-                        <span>恐慌贪婪指数</span>
+                        <div class="card-title">恐慌贪婪 (CNN)</div>
                     </div>
-                    <div class="card-body">
-                        <div class="fear-greed-row">
-                            <div class="fg-section">
-                                <div class="fg-title">CNN指数</div>
-                                <div id="us-cnn-fear" class="fear-greed-container active">
-                                    <div class="loading">
-                                        <i data-lucide="loader-2" class="loading-spinner"></i>
-                                        加载中...
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="fg-section">
-                                <div class="fg-title">自定义指数</div>
-                                <div id="us-custom-fear" class="fear-greed-container active">
-                                    <div class="loading">
-                                        <i data-lucide="loader-2" class="loading-spinner"></i>
-                                        加载中...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div id="us-cnn-fear" class="fg-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 美股领涨领跌板块 -->
+                <!-- US Custom Fear -->
                 <div class="card">
                     <div class="card-header">
-                        <span>领涨领跌板块</span>
-                        <div class="card-tabs">
-                            <button class="card-tab active" data-target="us-gainers">纳斯达克</button>
-                            <button class="card-tab" data-target="us-sp500">标普500</button>
-                        </div>
+                        <div class="card-title">恐慌贪婪 (Custom)</div>
                     </div>
-                    <div class="card-body">
-                        <div id="us-gainers" class="leaders-list active">
-                            <div class="placeholder">
-                                <i data-lucide="globe"></i>
-                                <p>美股数据接口开发中...</p>
-                            </div>
-                        </div>
-                        <div id="us-sp500" class="leaders-list">
-                            <div class="placeholder">
-                                <i data-lucide="globe"></i>
-                                <p>美股数据接口开发中...</p>
-                            </div>
-                        </div>
+                    <div id="us-custom-fear" class="fg-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 美股市场热度 -->
+                <!-- US Gainers (Indices) -->
                 <div class="card">
                     <div class="card-header">
-                        <span>市场热度</span>
+                        <div class="card-title">主要指数</div>
                     </div>
-                    <div class="card-body">
-                        <div id="market-us-heat" class="market-heat-container">
-                            <div class="placeholder">
-                                <i data-lucide="activity"></i>
-                                <p>美股热度指标开发中...</p>
-                            </div>
-                        </div>
+                    <div id="us-gainers" class="list-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                    <!-- Hidden placeholder for compat -->
+                    <div id="us-sp500" style="display:none;"></div>
+                </div>
+
+                <!-- US Heat -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">板块热度</div>
+                    </div>
+                    <div id="market-us-heat" class="heat-grid">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 美债收益率 -->
+                <!-- US Bonds -->
                 <div class="card">
                     <div class="card-header">
-                        <span>美债收益率</span>
+                        <div class="card-title">美债收益率</div>
                     </div>
-                    <div class="card-body">
-                        <div id="us-treasury" class="bonds-container">
-                            <div class="placeholder">
-                                <i data-lucide="trending-down"></i>
-                                <p>美债数据接口开发中...</p>
-                            </div>
-                        </div>
+                    <div id="us-treasury" class="bond-scroll">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 有色金属板块 -->
+        <!-- Metals -->
         <section class="tab-content" id="metals">
             <div class="section-header">
-                <h2>有色金属</h2>
-                <div class="refresh-info">
-                    <span class="refresh-badge">
-                        <span class="pulse-dot"></span>
-                        <span id="metals-refresh-interval">5分钟</span> 刷新
-                    </span>
-                </div>
+                <h2 class="section-title">贵金属</h2>
+                <div class="refresh-badge"><span id="metals-refresh-interval">5m</span> 刷新</div>
             </div>
 
-            <div class="dashboard-grid metals-grid">
-                <!-- 金银比 -->
-                <div class="card card-hero">
+            <div class="grid">
+                <div class="card hero">
                     <div class="card-header">
-                        <span>金银比</span>
-                        <button class="info-btn" data-tooltip="黄金价格除以白银价格的比值，用于贵金属投资决策">
-                            <i data-lucide="info"></i>
-                        </button>
+                        <div class="card-title">金银比</div>
                     </div>
-                    <div class="card-body">
-                        <div id="gold-silver-ratio" class="gold-silver-container">
-                            <div class="loading">
-                                <i data-lucide="loader-2" class="loading-spinner"></i>
-                                加载中...
-                            </div>
-                        </div>
+                    <div id="gold-silver-ratio" class="fg-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
 
-                <!-- 金属现货价格 -->
-                <div class="card card-wide">
+                <div class="card">
                     <div class="card-header">
-                        <span>金属现货价格</span>
+                        <div class="card-title">现货价格</div>
                     </div>
-                    <div class="card-body">
-                        <div id="metal-prices" class="metal-prices-container">
-                            <div class="placeholder">
-                                <i data-lucide="bar-chart-3"></i>
-                                <p>金属现货价格接口开发中...</p>
-                            </div>
-                        </div>
+                    <div id="metal-prices" class="list-container">
+                        <div class="loading">Loading...</div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- 底部信息 -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-left">
-                <p>
-                    <i data-lucide="database"></i>
-                    Powered by <a href="https://github.com/akfamily/akshare" target="_blank">AKShare</a>
-                </p>
-            </div>
-            <div class="footer-right">
-                <p>最后更新: <span id="footer-update-time">--</span></p>
-            </div>
-        </div>
+    <footer>
+        <p>Powered by AKShare &bull; <span id="footer-update-time">--</span></p>
     </footer>
 
-    <!-- 工具提示 -->
-    <div id="tooltip" class="tooltip"></div>
+    <div id="tooltip" style="display:none;"></div>
 
-    <!-- 脚本 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/charts.js"></script>
-    <script src="js/mobile.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/main.js"></script>
-    <script>
-        // 初始化图标
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 
 </html>
