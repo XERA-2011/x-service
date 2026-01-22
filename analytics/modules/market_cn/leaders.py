@@ -67,6 +67,8 @@ class CNMarketLeaders:
                     "up_count": int(safe_float(row.get("上涨家数", 0))),
                     "down_count": int(safe_float(row.get("下跌家数", 0))),
                 }
+                # 添加分析标签
+                sector["analysis"] = CNMarketLeaders._analyze_sector(sector, is_gainer=True)
                 sectors.append(sector)
 
             return {
@@ -74,6 +76,7 @@ class CNMarketLeaders:
                 "count": len(sectors),
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
                 "market_status": CNMarketLeaders._get_market_status(),
+                "explanation": CNMarketLeaders._get_sector_explanation(),
             }
 
         except Exception as e:
@@ -126,6 +129,8 @@ class CNMarketLeaders:
                     "up_count": int(safe_float(row.get("上涨家数", 0))),
                     "down_count": int(safe_float(row.get("下跌家数", 0))),
                 }
+                # 添加分析标签 (领跌板块)
+                sector["analysis"] = CNMarketLeaders._analyze_sector(sector, is_gainer=False)
                 sectors.append(sector)
 
             return {
@@ -214,3 +219,118 @@ class CNMarketLeaders:
             return "交易中"
         else:
             return "休市"
+
+    @staticmethod
+    def _get_heat_label(turnover: float) -> Dict[str, str]:
+        """根据换手率获取热度标签"""
+        if turnover >= 5:
+            return {"level": "极热", "color": "red"}
+        elif turnover >= 3:
+            return {"level": "较热", "color": "orange"}
+        elif turnover >= 1:
+            return {"level": "适中", "color": "gray"}
+        else:
+            return {"level": "冷门", "color": "blue"}
+
+    @staticmethod
+    def _generate_tip(is_gainer: bool, heat_level: str, strength_ratio: float, change_pct: float) -> str:
+        """
+        生成综合分析提示
+        
+        Args:
+            is_gainer: 是否为领涨板块
+            heat_level: 热度等级
+            strength_ratio: 上涨家数占比 (0-1)
+            change_pct: 涨跌幅
+        """
+        if is_gainer:
+            # 领涨板块提示
+            if heat_level == "极热":
+                if strength_ratio >= 0.8:
+                    return "走势强劲，注意追高风险"
+                else:
+                    return "热度极高，内部分化明显"
+            elif heat_level == "较热":
+                if strength_ratio >= 0.6:
+                    return "资金关注，可跟踪龙头"
+                else:
+                    return "热度较高，部分个股滞涨"
+            elif heat_level == "适中":
+                if change_pct >= 3:
+                    return "启动迹象，关注持续性"
+                else:
+                    return "温和上涨，走势健康"
+            else:
+                return "关注度低，启动初期"
+        else:
+            # 领跌板块提示
+            if heat_level == "极热":
+                return "恐慌抛售，观望为宜"
+            elif heat_level == "较热":
+                if strength_ratio <= 0.2:
+                    return "全面下跌，避开为主"
+                else:
+                    return "跌幅较大，等待企稳"
+            elif heat_level == "适中":
+                if abs(change_pct) <= 1.5:
+                    return "跌势趋缓，关注止跌信号"
+                else:
+                    return "正常调整，观察支撑"
+            else:
+                return "无量下跌，关注度低"
+
+    @staticmethod
+    def _analyze_sector(sector: Dict[str, Any], is_gainer: bool = True) -> Dict[str, Any]:
+        """
+        为单个板块生成分析数据
+        
+        Args:
+            sector: 板块数据字典
+            is_gainer: 是否为领涨板块
+            
+        Returns:
+            包含 heat, strength_ratio, tip 的分析字典
+        """
+        turnover = sector.get("turnover", 0)
+        up_count = sector.get("up_count", 0)
+        down_count = sector.get("down_count", 0)
+        change_pct = sector.get("change_pct", 0)
+        
+        # 热度标签
+        heat = CNMarketLeaders._get_heat_label(turnover)
+        
+        # 强弱比 (上涨家数占比)
+        total = up_count + down_count
+        strength_ratio = up_count / total if total > 0 else 0.5
+        
+        # 综合提示
+        tip = CNMarketLeaders._generate_tip(is_gainer, heat["level"], strength_ratio, change_pct)
+        
+        return {
+            "heat": heat,
+            "strength_ratio": round(strength_ratio * 100),
+            "tip": tip,
+        }
+
+    @staticmethod
+    def _get_sector_explanation() -> str:
+        """获取板块分析说明"""
+        return """
+板块分析标签说明：
+
+🔥 热度标签（基于换手率）：
+• 极热 (≥5%): 交易拥挤，短期可能回调
+• 较热 (3-5%): 资金关注度高
+• 适中 (1-3%): 正常交易状态
+• 冷门 (<1%): 关注度低
+
+📊 强弱比（板块内上涨家数占比）：
+• ≥80%: 全面上涨，趋势强劲
+• 60-80%: 多数上涨，结构较好
+• <60%: 内部分化，需精选个股
+
+💡 分析提示基于以上指标综合判断：
+• 高热度 + 高强弱比 = 注意追高风险
+• 适中热度 + 高强弱比 = 走势健康
+• 低热度 + 启动迹象 = 可关注
+        """.strip()

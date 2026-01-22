@@ -71,7 +71,17 @@ class CNMarketController {
             // Store data for re-sorting
             this.gainersData = gainers.sectors || [];
             this.losersData = losers.sectors || [];
+            // Store explanation for info button
+            this.sectorExplanation = gainers.explanation || '';
             this.renderCNLeaders(gainers, losers);
+
+            // Bind info button event
+            const infoBtn = document.getElementById('info-cn-sectors');
+            if (infoBtn && this.sectorExplanation) {
+                infoBtn.onclick = () => {
+                    utils.showInfoModal('板块分析说明', this.sectorExplanation);
+                };
+            }
         } catch (error) {
             console.error('加载领涨领跌板块失败:', error);
             utils.renderError('cn-gainers', '领涨领跌板块加载失败');
@@ -169,11 +179,25 @@ class CNMarketController {
 
         const html = sortedSectors.map(sector => {
             const change = utils.formatChange(sector.change_pct);
+            const analysis = sector.analysis || {};
+            const heat = analysis.heat || {};
+            const tip = analysis.tip || '';
+            const strengthRatio = analysis.strength_ratio || 0;
+
+            // 生成分析标签 HTML
+            const analysisHtml = tip ? `
+                <div class="sector-analysis">
+                    <span class="heat-tag heat-${heat.color || 'gray'}">${heat.level || ''}</span>
+                    <span class="analysis-tip">${tip}</span>
+                </div>
+            ` : '';
+
             return `
-                <div class="list-item">
+                <div class="list-item sector-item">
                     <div class="item-main">
                         <span class="item-title">${sector.name}</span>
                         <span class="item-sub">${sector.stock_count}家 | ${label}: ${sector.leading_stock || '--'}</span>
+                        ${analysisHtml}
                     </div>
                     <div style="text-align: right;">
                         <div class="item-value">${utils.formatNumber(sector.total_market_cap / 100000000)}亿</div>

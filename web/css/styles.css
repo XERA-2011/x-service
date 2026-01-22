@@ -604,3 +604,52 @@ footer {
         transform: translateY(0);
     }
 }
+
+/* Sector Analysis Tags */
+.sector-item .item-main {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.sector-analysis {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.heat-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.heat-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+
+.heat-orange {
+    background: rgba(249, 115, 22, 0.15);
+    color: #ea580c;
+}
+
+.heat-gray {
+    background: rgba(115, 115, 115, 0.1);
+    color: #737373;
+}
+
+.heat-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+}
+
+.analysis-tip {
+    color: var(--text-secondary);
+    font-size: 11px;
+}
