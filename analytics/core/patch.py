@@ -43,6 +43,14 @@ def _patched_request(self, method, url, *args, **kwargs):
     if "Connection" not in headers:
         headers["Connection"] = "keep-alive"
 
+    # 针对东方财富的特定伪装
+    if "eastmoney.com" in url or "em" in url:
+        headers["Referer"] = "https://quote.eastmoney.com/"
+        headers["Origin"] = "https://quote.eastmoney.com"
+
+    if "Upgrade-Insecure-Requests" not in headers:
+        headers["Upgrade-Insecure-Requests"] = "1"
+
     kwargs["headers"] = headers
     
     # 增加超时设置 (如果未设置)

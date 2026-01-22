@@ -119,6 +119,13 @@ class CNDividendStrategy:
             # 5. 格式化数据
             stocks: List[Dict[str, Any]] = []
             for _, row in filtered_df.head(limit).iterrows():
+                pe = safe_float(row.get("市盈率-动态"))
+                pb = safe_float(row.get("市净率"))
+                
+                # 计算 ROE 和 盈利收益率
+                roe = (pb / pe * 100) if pe and pe > 0 and pb else 0
+                earnings_yield = (100 / pe) if pe and pe > 0 else 0
+                
                 code = str(row["代码"]).zfill(6)
                 stock = {
                     "code": code,
@@ -126,8 +133,10 @@ class CNDividendStrategy:
                     "weight": safe_float(row.get("权重", 0)),
                     "price": safe_float(row.get("最新价")),
                     "change_pct": safe_float(row.get("涨跌幅")),
-                    "pe_ratio": safe_float(row.get("市盈率-动态")),
-                    "pb_ratio": safe_float(row.get("市净率")),
+                    "pe_ratio": pe,
+                    "pb_ratio": pb,
+                    "roe": round(roe, 2),
+                    "earnings_yield": round(earnings_yield, 2),
                     "market_cap": safe_float(row.get("总市值", 0)),
                     "turnover": safe_float(row.get("成交额", 0)),
                 }
@@ -206,6 +215,12 @@ class CNDividendStrategy:
             pe_values = [s["pe_ratio"] for s in stocks if s.get("pe_ratio") and s["pe_ratio"] > 0]
             avg_pe_ratio = sum(pe_values) / len(pe_values) if pe_values else 0
             
+            roe_values = [s["roe"] for s in stocks if s.get("roe")]
+            avg_roe = sum(roe_values) / len(roe_values) if roe_values else 0
+            
+            ey_values = [s["earnings_yield"] for s in stocks if s.get("earnings_yield")]
+            avg_ey = sum(ey_values) / len(ey_values) if ey_values else 0
+            
             # 计算涨跌统计
             changes = [s["change_pct"] for s in stocks if s.get("change_pct") is not None]
             up_count = len([c for c in changes if c > 0])
@@ -218,11 +233,13 @@ class CNDividendStrategy:
             
             return {
                 "avg_pe_ratio": round(avg_pe_ratio, 2),
+                "avg_roe": round(avg_roe, 2),
+                "avg_earnings_yield": round(avg_ey, 2),
                 "avg_change_pct": round(avg_change, 2),
                 "up_count": up_count,
                 "down_count": down_count,
                 "top5_weight": round(total_weight_top5, 2),
-                "low_volatility_count": len(stocks),  # 指数成分股本身就是低波动筛选后的
+                "low_volatility_count": len(stocks),
             }
 
         except Exception as e:
@@ -233,11 +250,9 @@ class CNDividendStrategy:
     def _get_strategy_description() -> str:
         """获取策略说明"""
         return """
-中证红利低波动指数 (H30269) 说明：
-• 编制机构：中证指数有限公司
-• 成分股数量：50 只
-• 选样方法：从沪深市场中选取股息率高、波动率低的股票
-• 加权方式：股息率加权
-• 调整频率：每年 12 月调整一次
-• 投资价值：适合追求稳定分红收益、偏好低波动的长期投资者
+中证红利低波动指数 (H30269) 深度分析：
+• 选股逻辑：高股息 + 低波动 = "稳健复利"
+• 价值特征：适合在低利率环境下替代债券，具有类债属性
+• 历史表现：在震荡市和熊市中通常跑赢大盘，牛市中弹性较弱
+• 核心指标：关注 ROE (净资产收益率) 和 PB (市净率) 的匹配度
         """.strip()

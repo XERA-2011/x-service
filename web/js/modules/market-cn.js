@@ -234,12 +234,16 @@ class CNMarketController {
 
         const stats = data.strategy_stats || {};
 
-        // 统计区：显示成分股数量、平均PE、涨跌统计
+        // 统计区：显示成分股数量、平均PE、平均ROE、平均盈利收益率
         const statsHtml = `
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                 <div>
-                    <div class="item-sub">成分股</div>
-                    <div class="heat-val">${data.total_constituents || 50}</div>
+                    <div class="item-sub">均ROE</div>
+                    <div class="heat-val" style="color: var(--accent-red)">${utils.formatPercentage(stats.avg_roe)}</div>
+                </div>
+                <div>
+                    <div class="item-sub">盈利收益</div>
+                    <div class="heat-val" style="color: var(--accent-red)">${utils.formatPercentage(stats.avg_earnings_yield)}</div>
                 </div>
                 <div>
                     <div class="item-sub">均PE</div>
@@ -252,18 +256,25 @@ class CNMarketController {
             </div>
         `;
 
-        // 成分股列表：显示权重和实时涨跌
+        // 成分股列表：显示权重和实时涨跌，增加第二行价值指标
         const listHtml = data.stocks.slice(0, 10).map(stock => {
             const change = utils.formatChange(stock.change_pct);
             return `
-                <div class="list-item">
+                <div class="list-item" style="flex-wrap: wrap;">
                     <div class="item-main">
                         <span class="item-title">${stock.name}</span>
-                        <span class="item-sub">${stock.code} | 权重 ${utils.formatNumber(stock.weight)}%</span>
+                        <span class="item-sub">${stock.code}</span>
                     </div>
                     <div style="text-align: right;">
                         <div class="item-value">${utils.formatNumber(stock.price)}</div>
                         <div class="item-change ${change.class}">${change.text}</div>
+                    </div>
+                    <!-- 第二行：深度价值指标 -->
+                    <div style="width: 100%; display: flex; justify-content: space-between; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--border-light); font-size: 11px; color: var(--text-tertiary);">
+                        <span>权重 ${utils.formatNumber(stock.weight)}%</span>
+                        <span>ROE: ${utils.formatNumber(stock.roe)}%</span>
+                        <span>E/P: ${utils.formatNumber(stock.earnings_yield)}%</span>
+                        <span>PB: ${utils.formatNumber(stock.pb_ratio)}</span>
                     </div>
                 </div>
             `;
