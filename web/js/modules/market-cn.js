@@ -234,11 +234,24 @@ class CNMarketController {
 
         const stats = data.strategy_stats || {};
 
-        // 统计区：显示成分股数量、平均PE、平均ROE、平均盈利收益率
+        const signal = stats.signal || { text: '暂无信号', color: '#909399' };
+        const bankWeight = stats.bank_weight || 0;
+
+        // 统计区：信号、银行占比 + 核心指标
         const statsHtml = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px;">
+                <div style="font-size: 12px; font-weight: 600; color: ${signal.color}; border: 1px solid ${signal.color}; padding: 2px 8px; border-radius: 4px;">
+                    ${signal.text}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${bankWeight > 40 ? '#F56C6C' : '#E6A23C'};"></span>
+                    银行仓位 ${bankWeight}%
+                </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                 <div>
-                    <div class="item-sub">均ROE</div>
+                    <div class="item-sub">加权ROE</div>
                     <div class="heat-val" style="color: var(--accent-red)">${utils.formatPercentage(stats.avg_roe)}</div>
                 </div>
                 <div>
@@ -246,7 +259,7 @@ class CNMarketController {
                     <div class="heat-val" style="color: var(--accent-red)">${utils.formatPercentage(stats.avg_earnings_yield)}</div>
                 </div>
                 <div>
-                    <div class="item-sub">均PE</div>
+                    <div class="item-sub">加权PE</div>
                     <div class="heat-val">${utils.formatNumber(stats.avg_pe_ratio)}</div>
                 </div>
                 <div>

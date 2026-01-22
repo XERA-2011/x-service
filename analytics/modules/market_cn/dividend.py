@@ -211,16 +211,42 @@ class CNDividendStrategy:
             return {}
 
         try:
-            # 计算平均指标
-            pe_values = [s["pe_ratio"] for s in stocks if s.get("pe_ratio") and s["pe_ratio"] > 0]
-            avg_pe_ratio = sum(pe_values) / len(pe_values) if pe_values else 0
+            # 计算加权指标 (Weighted Metrics)
+            total_weight = sum(s.get("weight", 0) for s in stocks)
+            if total_weight == 0:
+                total_weight = 1  # 避免除以零
+
+            # 加权 PE
+            weighted_pe = sum(s.get("pe_ratio", 0) * s.get("weight", 0) for s in stocks if s.get("pe_ratio")) / total_weight
             
-            roe_values = [s["roe"] for s in stocks if s.get("roe")]
-            avg_roe = sum(roe_values) / len(roe_values) if roe_values else 0
+            # 加权 ROE
+            weighted_roe = sum(s.get("roe", 0) * s.get("weight", 0) for s in stocks if s.get("roe")) / total_weight
             
-            ey_values = [s["earnings_yield"] for s in stocks if s.get("earnings_yield")]
-            avg_ey = sum(ey_values) / len(ey_values) if ey_values else 0
+            # 加权 盈利收益率 (这是股息率的上限代理)
+            weighted_ey = sum(s.get("earnings_yield", 0) * s.get("weight", 0) for s in stocks if s.get("earnings_yield")) / total_weight
             
+            # 银行股权重占比
+            bank_weight = sum(s.get("weight", 0) for s in stocks if "银行" in s.get("name", ""))
+            
+            # 信号系统 (Signal System)
+            # 阈值参考: 激进 PE<=7 或 EY>=5.8%; 保守 PE>=8.2 或 EY<4.0%
+            signal = "NEUTRAL"
+            signal_color = "#E6A23C" # Orange/Yellow
+            signal_text = "观察 / 定投"
+            
+            if weighted_pe > 0 and weighted_pe <= 7.0:
+                signal = "OPPORTUNITY"
+                signal_color = "#67C23A" # Green/Success
+                signal_text = "极低估 / 机会"
+            elif weighted_ey >= 5.8:
+                 signal = "OPPORTUNITY"
+                 signal_color = "#67C23A"
+                 signal_text = "高股息 / 机会"
+            elif weighted_pe >= 8.2 or (weighted_ey > 0 and weighted_ey < 4.0):
+                signal = "CAUTION"
+                signal_color = "#F56C6C" # Red/Danger
+                signal_text = "偏高估 / 谨慎"
+
             # 计算涨跌统计
             changes = [s["change_pct"] for s in stocks if s.get("change_pct") is not None]
             up_count = len([c for c in changes if c > 0])
@@ -232,9 +258,15 @@ class CNDividendStrategy:
             total_weight_top5 = sum(s.get("weight", 0) for s in top_weights)
             
             return {
-                "avg_pe_ratio": round(avg_pe_ratio, 2),
-                "avg_roe": round(avg_roe, 2),
-                "avg_earnings_yield": round(avg_ey, 2),
+                "avg_pe_ratio": round(weighted_pe, 2), # 使用加权替换简单平均
+                "avg_roe": round(weighted_roe, 2),
+                "avg_earnings_yield": round(weighted_ey, 2),
+                "bank_weight": round(bank_weight, 2),
+                "signal": {
+                    "type": signal,
+                    "color": signal_color,
+                    "text": signal_text
+                },
                 "avg_change_pct": round(avg_change, 2),
                 "up_count": up_count,
                 "down_count": down_count,
