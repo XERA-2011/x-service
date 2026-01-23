@@ -149,6 +149,24 @@ class API {
         return this.request('/metals/spot-prices');
     }
 
+    // 宏观数据 API
+    async getLPR() {
+        return this.request('/macro/lpr');
+    }
+
+    async getNorthFunds() {
+        return this.request('/macro/north-funds');
+    }
+
+    async getETFFlow(limit = 10) {
+        return this.request(`/macro/etf-flow?limit=${limit}`);
+    }
+
+    async getEconomicCalendar(date = null) {
+        const params = date ? `?date=${date}` : '';
+        return this.request(`/macro/calendar${params}`);
+    }
+
     async triggerWarmup() {
         return this.request('/api/cache/warmup', { method: 'POST' });
     }

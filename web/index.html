@@ -43,6 +43,9 @@
             <button class="tab-btn" data-tab="metals">
                 <i data-lucide="coins" width="16"></i> 金属
             </button>
+            <button class="tab-btn" data-tab="macro">
+                <i data-lucide="bar-chart-3" width="16"></i> 宏观
+            </button>
         </nav>
 
         <!-- CN Market -->
@@ -235,6 +238,60 @@
                 </div>
             </div>
         </section>
+
+        <!-- Macro 宏观数据 -->
+        <section class="tab-content" id="macro">
+            <div class="section-header">
+                <h2 class="section-title">宏观数据</h2>
+                <button class="refresh-btn" onclick="window.app.refreshCurrentTab()" title="点击刷新"><i
+                        data-lucide="refresh-cw" width="14"></i> 刷新</button>
+            </div>
+
+            <div class="grid">
+                <!-- LPR 利率 -->
+                <div class="card hero">
+                    <div class="card-header">
+                        <div class="card-title">LPR 利率</div>
+                        <button class="info-btn" id="info-lpr" title="说明"><i data-lucide="info" width="14"></i></button>
+                    </div>
+                    <div id="macro-lpr" class="lpr-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- 北向资金 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">北向资金</div>
+                        <button class="info-btn" id="info-north" title="说明"><i data-lucide="info"
+                                width="14"></i></button>
+                    </div>
+                    <div id="macro-north-funds">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- ETF 资金流向 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">ETF 涨跌榜</div>
+                    </div>
+                    <div id="macro-etf-flow" class="list-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- 经济日历 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">经济日历</div>
+                    </div>
+                    <div id="macro-calendar" class="list-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <footer>
@@ -250,6 +307,7 @@
     <script src="js/modules/market-cn.js"></script>
     <script src="js/modules/market-us.js"></script>
     <script src="js/modules/metals.js"></script>
+    <script src="js/modules/macro.js"></script>
     <script src="js/main.js"></script>
     <script>lucide.createIcons();</script>
 </body>

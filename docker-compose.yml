@@ -15,6 +15,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # x-analytics 主服务
   x-analytics:
@@ -38,6 +43,11 @@ services:
     dns:
       - 223.5.5.5 # 阿里云 DNS
       - 8.8.8.8 # Google DNS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   redis_data:

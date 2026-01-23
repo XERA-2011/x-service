@@ -75,6 +75,11 @@ class Settings:
         
         # === 股票数据 ===
         "stock_spot": 7200,          # 2小时 (原1小时)
+        
+        # === 宏观数据 ===
+        "lpr": 86400,                # 24小时 (每月更新)
+        "etf_flow": 7200,            # 2小时
+        "calendar": 3600,            # 1小时
     }
 
     # Stale TTL 倍率：物理 TTL = TTL × STALE_TTL_RATIO

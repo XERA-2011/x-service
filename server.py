@@ -9,6 +9,7 @@ from analytics.core.scheduler import setup_default_jobs, initial_warmup
 from analytics.api.market_cn import router as cn_market_router
 from analytics.api.metals import router as metals_router
 from analytics.api.market_us import router as us_market_router
+from analytics.api.macro import router as macro_router
 from analytics.core.patch import apply_patches
 from analytics.core.security import SecurityMiddleware
 from analytics.core.logger import logger
@@ -87,6 +88,7 @@ app.add_middleware(
 app.include_router(cn_market_router)
 app.include_router(metals_router)
 app.include_router(us_market_router)
+app.include_router(macro_router)
 
 
 # -----------------------------------------------------------------------------
