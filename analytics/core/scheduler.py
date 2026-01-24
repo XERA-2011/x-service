@@ -253,7 +253,7 @@ from ..modules.market_us import (
     USTreasury,
     USMarketLeaders
 )
-from ..modules.metals import GoldSilverAnalysis, MetalSpotPrice
+from ..modules.metals import GoldSilverAnalysis, MetalSpotPrice, GoldFearGreedIndex
 
 
 def setup_default_jobs():
@@ -367,6 +367,13 @@ def setup_default_jobs():
         market="metals"
     )
 
+    # 3. 黄金恐慌贪婪
+    scheduler.add_market_job(
+        job_id="warmup:metals:fear",
+        func=lambda: warmup_cache(GoldFearGreedIndex.calculate),
+        market="metals"
+    )
+
     # =========================================================================
     # 固定时间任务
     # =========================================================================
@@ -404,6 +411,7 @@ def initial_warmup():
 
         # Metals
         warmup_cache(GoldSilverAnalysis.get_gold_silver_ratio)
+        warmup_cache(GoldFearGreedIndex.calculate)
 
         print("✅ 核心指标预热完成")
         
