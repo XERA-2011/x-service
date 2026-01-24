@@ -370,6 +370,31 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
                             stale_data["_cached"] = True
                             stale_data["_stale"] = True
                             stale_data["_fallback"] = True
+                        
+                        # 关键：延长陈旧数据的寿命，避免下一次请求物理过期
+                        # 我们重新写入陈旧数据，给予新的 TTL
+                        try:
+                             # 物理 TTL = ttl + stale_ttl (完整周期重置)
+                             physical_ttl = ttl + (stale_ttl if stale_ttl else 0)
+                             # 注意：这里我们得重新构造存储结构，因为 stale_data 只是 payload
+                             current_now = time.time()
+                             cache_value = {
+                                "_meta": {
+                                    "expire_at": current_now + ttl, # 逻辑上依然是过期的，促使下次尽快刷新
+                                    # 或者：我们可以让它逻辑上也稍微"新鲜"一小会儿（例如1分钟），防止高并发下的瞬时重试风暴
+                                    # 但 SWR 模式下，锁已经控制了并发，所以保持逻辑过期没事，只要物理不过期
+                                    "ttl": ttl,
+                                },
+                                "data": stale_data,
+                            }
+                             # 只有当 stale_ttl 存在时才有意义去延长物理时间
+                             if stale_ttl:
+                                 # 稍微延长物理时间，确保下次还能拿到
+                                 cache.set(cache_key, cache_value, physical_ttl)
+                                 print(f"♻️ 已延长陈旧数据物理寿命: {key_prefix}")
+                        except Exception as extend_err:
+                            print(f"⚠️ 延长陈旧数据寿命失败: {extend_err}")
+
                         return stale_data
                     return func(*args, **kwargs)
 
@@ -423,4 +448,30 @@ def warmup_cache(func: Callable, *args, **kwargs) -> bool:
             return True
     except Exception as e:
         print(f"❌ 缓存预热失败 [{func.__name__}]: {e}")
+    
+    # === 故障保护逻辑 ===
+    # 如果预热失败（无论是 validation 失败还是 Exception），尝试延长现有缓存的寿命
+    try:
+        prefix = getattr(func, "_cache_prefix", None)
+        if prefix:
+             # 我们需要重新计算 key，但这需要 args/kwargs
+             # 幸运的是 args/kwargs 就在作用域里
+             key = make_cache_key(prefix, *args, **kwargs)
+             
+             # 获取现有数据
+             cached_val = cache.get(key)
+             if cached_val and "_meta" in cached_val:
+                 # 延长物理 TTL
+                 ttl = getattr(func, "_cache_ttl", 60)
+                 stale = getattr(func, "_cache_stale_ttl", 0) or 0
+                 physical_ttl = ttl + stale
+                 
+                 # 重新 सेट (SETEX)
+                 # 内容不变，只更新过期时间
+                 cache.set(key, cached_val, physical_ttl)
+                 print(f"🛡️ [预热保护] 已延长现有缓存寿命: {prefix}")
+                 return True # 虽然预热新数据失败，但保护了老数据，算作"处理成功"
+    except Exception as protect_err:
+        print(f"⚠️ [预热保护] 执行失败: {protect_err}")
+
     return False
