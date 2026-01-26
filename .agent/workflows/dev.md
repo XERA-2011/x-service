@@ -32,6 +32,15 @@ After reading, briefly state the 2-3 most critical constraints from the guidelin
 
 Now proceed with the user's actual coding request, ensuring all changes adhere to the loaded guidelines.
 
+## 5. Resilience Check (Self-Correction)
+
+Before finishing, ask yourself:
+- "If the API fails or times out, will the UI get stuck in 'Loading...'?"
+- "If one part of `Promise.all` fails, will the rest still render?"
+- "Are error messages aligned correctly (centered)?"
+
+If the answer is NO, apply fixes immediately.
+
 ---
 
 **Usage**: `/dev <your coding request>`

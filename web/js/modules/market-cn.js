@@ -115,19 +115,23 @@ class CNMarketController {
     async loadCNLeaders() {
         try {
             const [gainers, losers] = await Promise.all([
-                api.getCNTopGainers(),
-                api.getCNTopLosers()
+                api.getCNTopGainers().catch(e => ({ error: '数据加载失败' })),
+                api.getCNTopLosers().catch(e => ({ error: '数据加载失败' }))
             ]);
-            // Store data for re-sorting
+
+            // Store data for re-sorting (check for error before accessing sectors)
             this.gainersData = gainers.sectors || [];
             this.losersData = losers.sectors || [];
+
             // Store explanation for info button
             this.sectorExplanation = gainers.explanation || '';
+
             this.renderCNLeaders(gainers, losers);
 
             // Bind info button events (both gainers and losers use same explanation)
             const infoBtn = document.getElementById('info-cn-sectors');
             const infoBtnLosers = document.getElementById('info-cn-sectors-losers');
+
             if (this.sectorExplanation) {
                 if (infoBtn) {
                     infoBtn.onclick = () => {
@@ -144,7 +148,8 @@ class CNMarketController {
             }
         } catch (error) {
             console.error('加载领涨领跌板块失败:', error);
-            utils.renderError('cn-gainers', '领涨领跌板块加载失败');
+            utils.renderError('cn-gainers', '系统错误');
+            utils.renderError('cn-losers', '系统错误');
         }
     }
 
@@ -211,8 +216,17 @@ class CNMarketController {
     }
 
     renderCNLeaders(gainers, losers) {
-        this.renderSectorList('cn-gainers', gainers.sectors || [], '领涨', this.currentSort.gainers);
-        this.renderSectorList('cn-losers', losers.sectors || [], '领跌', this.currentSort.losers);
+        if (gainers.error) {
+            utils.renderError('cn-gainers', gainers.error);
+        } else {
+            this.renderSectorList('cn-gainers', gainers.sectors || [], '领涨', this.currentSort.gainers);
+        }
+
+        if (losers.error) {
+            utils.renderError('cn-losers', losers.error);
+        } else {
+            this.renderSectorList('cn-losers', losers.sectors || [], '领跌', this.currentSort.losers);
+        }
     }
 
     renderSectorList(containerId, sectors, label = '领涨', sortBy = 'pct') {

@@ -109,10 +109,22 @@ Complex logic must be split by business domain into separate modules under `web/
   - Instantiating Controllers in `this.modules`.
   - Routing `refreshCurrentTab()` calls to the active controller.
 
-### Shared Utilities
-- **`utils.js`**: Pure functions (formatting, DOM helpers).
 - **`api.js`**: All network requests.
 - **`charts.js`**: ECharts wrappers and theme configuration.
+
+## 7. User Experience & Resilience
+### Error Handling & Loading
+- **Unified Error Rendering**: ALWAYS use `utils.renderError(containerId, msg)` instead of ad-hoc `innerHTML`. This ensures consistent styling, centering, and icon usage.
+- **No Infinite Loading**: EVERY async operation must handle failure states. Ensure containers never get stuck in "Loading..." state.
+- **Partial Failure Robustness**: When loading multiple independent data sources (e.g., via `Promise.all`), use `.catch()` on individual promises or `Promise.allSettled` to prevent one failure from blocking others.
+- **Layout Stability**: Error/Loading containers must have `width: 100%` / `flex: 1` to prevent layout collapse in Flex/Grid parents.
+
+### Interactive Elements
+- **Conditional Visibility**: Info/Action buttons (like "Explain") must be `display: none` by default and only shown (via JS) when data is successfully loaded and relevant context is available. Avoid showing non-functional buttons.
+- **Icons**: Use semantic icons:
+  - Wait/Warming Up: `clock`
+  - Info: `help-circle`
+  - Error: `alert-circle`
 
 ---
 
