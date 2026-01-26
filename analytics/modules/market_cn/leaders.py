@@ -74,7 +74,7 @@ class CNMarketLeaders:
                 "count": len(sectors),
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
                 "market_status": CNMarketLeaders._get_market_status(),
-                "explanation": CNMarketLeaders._get_sector_explanation(),
+                "explanation": CNMarketLeaders._get_sector_explanation(is_gainer=True),
             }
 
         except Exception as e:
@@ -136,6 +136,7 @@ class CNMarketLeaders:
                 "count": len(sectors),
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
                 "market_status": CNMarketLeaders._get_market_status(),
+                "explanation": CNMarketLeaders._get_sector_explanation(is_gainer=False),
             }
 
         except Exception as e:
@@ -324,10 +325,11 @@ class CNMarketLeaders:
         }
 
     @staticmethod
-    def _get_sector_explanation() -> str:
+    def _get_sector_explanation(is_gainer: bool = True) -> str:
         """获取板块分析说明"""
-        return """
-板块分析标签说明：
+        if is_gainer:
+            return """
+板块分析标签说明（领涨）：
 
 🔥 热度标签（基于换手率）：
 • 极热 (≥5%): 交易拥挤，短期可能回调
@@ -335,13 +337,33 @@ class CNMarketLeaders:
 • 适中 (1-3%): 正常交易状态
 • 冷门 (<1%): 关注度低
 
-📊 强弱比（板块内上涨家数占比）：
+📊 强弱比（涨家数占比）：
 • ≥80%: 全面上涨，趋势强劲
-• 60-80%: 多数上涨，结构较好
+• 60-80%: 多数上涨，结构良好
 • <60%: 内部分化，需精选个股
 
-💡 分析提示基于以上指标综合判断：
+💡 综合提示：
 • 高热度 + 高强弱比 = 注意追高风险
 • 适中热度 + 高强弱比 = 走势健康
 • 低热度 + 启动迹象 = 可关注
-        """.strip()
+            """.strip()
+        else:
+            return """
+板块分析标签说明（领跌）：
+
+🔥 恐慌标签（基于换手率）：
+• 恐慌 (≥5%): 抛压极大，非理性杀跌
+• 剧烈 (3-5%): 资金大幅流出
+• 温和 (1-3%): 正常调整
+• 低迷 (<1%): 无量阴跌
+
+📊 弱势比（跌家数占比）：
+• ≥80%: 泥沙俱下，全面杀跌
+• 60-80%: 多数下跌，空头占优
+• <60%: 抵抗式下跌，部分抗跌
+
+💡 综合提示：
+• 高换手 + 全面杀跌 = 恐慌抛售，观望
+• 无量 + 全面下跌 = 阴跌不止，慎抄底
+• 缩量 + 抵抗下跌 = 关注止跌信号
+            """.strip()
