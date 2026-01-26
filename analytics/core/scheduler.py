@@ -61,6 +61,11 @@ class SmartScheduler:
 
         def smart_warmup():
             """智能预热函数"""
+            import random
+            import time as time_module
+            # 错峰延迟 (0-10秒随机)，避免多个任务同时触发导致 API 限流
+            stagger_delay = random.uniform(0, 10)
+            time_module.sleep(stagger_delay)
             try:
                 # 直接执行预热函数
                 # 执行频率由 APScheduler 的 IntervalTrigger 控制

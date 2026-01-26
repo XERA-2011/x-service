@@ -278,9 +278,9 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
                 blocking = not return_stale
 
                 try:
-                    # 获取锁
+                    # 获取锁 (减少阻塞时间，更快返回陈旧数据)
                     lock = cache.lock(
-                        lock_key, timeout=30, blocking_timeout=5 if blocking else 0
+                        lock_key, timeout=30, blocking_timeout=2 if blocking else 0
                     )
                     acquired = lock.acquire(blocking=blocking)
 
