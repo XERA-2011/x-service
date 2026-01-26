@@ -24,10 +24,15 @@ Before starting a big feature, ask for an architectural plan.
 
 ## Checklist to Enforce
 ### General
-1.  **Error Handling**: Are try/except blocks too broad? Are errors logged?
-2.  **Config**: Are secrets hardcoded? (MUST be in env vars).
-3.  **Typos**: Check function names and variable consistency.
-4.  **Complexity**: Is a function doing too much? (Split it).
+### Code Hygiene (The "Clean Freak" Standard)
+1.  **Type Safety**: Are all functions typed? (`mypy` compliant).
+2.  **Complexity**: Is Cyclomatic Complexity low? (No deeply nested `if/for`). Max indent level: 3.
+3.  **Naming**:
+    - Python: `snake_case` for vars/funcs, `PascalCase` for classes.
+    - JS: `camelCase` for vars/funcs, `PascalCase` for classes.
+    - Constants: `UPPER_CASE` everywhere.
+4.  **No Magic Numbers**: Extract constants (e.g., `MAX_RETRIES = 5` instead of hardcoded `5`).
+5.  **Dead Code**: Delete commented-out code blocks immediately.
 
 ### UI/UX & Frontend
 1.  **UI Standards**: Does it follow [Frontend Skills](../skills/frontend_development/SKILL.md)?

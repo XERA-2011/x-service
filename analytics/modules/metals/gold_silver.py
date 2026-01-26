@@ -19,16 +19,21 @@ class GoldSilverAnalysis:
     GOLD_CODE = "GC00Y"   # COMEX黄金主力
     SILVER_CODE = "SI00Y"  # COMEX白银主力
 
-    # 历史统计 (数据来源: 50年历史数据)
-    HISTORICAL_HIGH = 123.8   # 2020年3月 COVID危机
-    HISTORICAL_LOW = 14.0     # 1980年1月 (白银投机泡沫)
-    HISTORICAL_AVG = 65.0     # 50年历史均值
+    # 阈值常量 (用于分析金银比水平)
+    # 核心逻辑：基于50年历史均值(65.0)的标准差偏离
+    RATIO_LEVEL_EXTREME_HIGH = 90.0  # 极高 (> +25)
+    RATIO_LEVEL_HIGH = 80.0          # 偏高 (> +15)
+    RATIO_LEVEL_LOW = 55.0           # 偏低 (< -10)
+    RATIO_LEVEL_EXTREME_LOW = 45.0   # 极低 (< -20)
 
     @staticmethod
     @cached("metals:gold_silver_ratio", ttl=settings.CACHE_TTL["metals"], stale_ttl=settings.CACHE_TTL["metals"] * settings.STALE_TTL_RATIO)
     def get_gold_silver_ratio() -> Dict[str, Any]:
         """
         获取金银比数据和分析 (COMEX 美元计价)
+
+        Returns:
+            Dict[str, Any]: 包含黄金价格、白银价格、比率及投资建议的字典
         """
         try:
             # 使用带重试的 API 调用
@@ -58,14 +63,14 @@ class GoldSilverAnalysis:
             gold_change = safe_float(gold["涨跌幅"])
             silver_change = safe_float(silver["涨跌幅"])
 
-            if gold_price <= 0 or silver_price <= 0:
+            if gold_price is None or silver_price is None or gold_price <= 0 or silver_price <= 0:
                 return {"error": "价格数据无效", "ratio": {"current": 0}}
 
             # 计算金银比 (无量纲)
             ratio = gold_price / silver_price
 
             # 分析
-            ratio_analysis = GoldSilverAnalysis._analyze_ratio_level(ratio, [])
+            ratio_analysis = GoldSilverAnalysis._analyze_ratio_level(ratio)
             investment_advice = GoldSilverAnalysis._get_investment_advice(
                 ratio, ratio_analysis
             )
@@ -73,13 +78,13 @@ class GoldSilverAnalysis:
             return {
                 "gold": {
                     "price": round(gold_price, 2),
-                    "change_pct": round(gold_change, 2),
+                    "change_pct": round(gold_change if gold_change else 0.0, 2),
                     "unit": "USD/oz",
                     "name": "COMEX黄金",
                 },
                 "silver": {
                     "price": round(silver_price, 2),
-                    "change_pct": round(silver_change, 2),
+                    "change_pct": round(silver_change if silver_change else 0.0, 2),
                     "unit": "USD/oz",
                     "name": "COMEX白银",
                 },
@@ -100,27 +105,26 @@ class GoldSilverAnalysis:
             return {"error": str(e), "ratio": {"current": 0}}
 
     @staticmethod
-    def _analyze_ratio_level(
-        current_ratio: float, history: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """分析金银比水平"""
-        # 基于历史均值 65.0 左右的正态分布逻辑调整
-        # > 90: 极高 (偏离均值 +25)
-        # 80-90: 偏高 (偏离均值 +15)
-        # 55-80: 正常 (涵盖均值 65)
-        # 45-55: 偏低
-        # < 45: 极低
+    def _analyze_ratio_level(current_ratio: float) -> Dict[str, str]:
+        """
+        分析金银比所处的历史水平区间
 
-        if current_ratio > 90:
+        Args:
+            current_ratio (float): 当前金银比值
+
+        Returns:
+            Dict[str, str]: 包含 level (评级) 和 comment (评价)
+        """
+        if current_ratio > GoldSilverAnalysis.RATIO_LEVEL_EXTREME_HIGH:
             level = "极高"
             comment = "处于历史高位区域"
-        elif current_ratio > 80:
+        elif current_ratio > GoldSilverAnalysis.RATIO_LEVEL_HIGH:
             level = "偏高"
             comment = "高于历史均值"
-        elif current_ratio < 45:
+        elif current_ratio < GoldSilverAnalysis.RATIO_LEVEL_EXTREME_LOW:
             level = "极低"
             comment = "处于历史低位区域"
-        elif current_ratio < 55:
+        elif current_ratio < GoldSilverAnalysis.RATIO_LEVEL_LOW:
             level = "偏低"
             comment = "低于历史均值"
         else:
@@ -131,9 +135,18 @@ class GoldSilverAnalysis:
 
     @staticmethod
     def _get_investment_advice(
-        ratio: float, analysis: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """获取投资建议 (仅供参考)"""
+        ratio: float, analysis: Dict[str, str]
+    ) -> Dict[str, str]:
+        """
+        根据金银比水平生成投资参考建议
+
+        Args:
+            ratio (float): 当前金银比
+            analysis (Dict[str, str]): 包含 level 的分析结果
+
+        Returns:
+            Dict[str, str]: 包含 strategy (策略) 和 reasoning (理由)
+        """
         level = analysis.get("level", "正常")
         
         if level in ["极高"]:
@@ -169,12 +182,18 @@ class GoldSilverAnalysis:
 
     @staticmethod
     def _get_explanation() -> str:
-        return """
+        """
+        获取前端显示的说明文本 (Explain Why)
+        
+        Returns:
+            str: 格式化的说明文本
+        """
+        return f"""
 金银比(Gold-Silver Ratio)说明：
 • 定义：1盎司黄金价格 ÷ 1盎司白银价格
 • 核心逻辑：
-  - 均值回归：历史长期均值约 65.0
-  - 高位 (>80)：暗示白银相对黄金超卖，或有补涨需求
-  - 低位 (<55)：暗示白银投机情绪过热，黄金避险性价比提升
+  - 均值回归：历史长期均值约 {GoldSilverAnalysis.HISTORICAL_AVG}
+  - 高位 (>{int(GoldSilverAnalysis.RATIO_LEVEL_HIGH)})：暗示白银相对黄金超卖，或有补涨需求
+  - 低位 (<{int(GoldSilverAnalysis.RATIO_LEVEL_LOW)})：暗示白银投机情绪过热，黄金避险性价比提升
 • 策略参考：利用比值偏离均值的机会，进行相对价值配置
         """.strip()

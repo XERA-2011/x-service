@@ -44,7 +44,32 @@ Direct calls to `akshare` are **FORBIDDEN** in production code. You MUST use the
   ```
 - **Safe Conversions**: Use `safe_float(val, default=None)` for financial data. Avoid `float()` directly on API responses.
 
-## 5. Testing and Debugging
+- **Safe Conversions**: Use `safe_float(val, default=None)` for financial data. Avoid `float()` directly on API responses.
+
+## 6. Code Hygiene & Readability (Strict)
+### Type Hinting
+- **Mandatory**: All function signatures MUST have type hints.
+  ```python
+  # ✅ Good
+  def calculate_yield(price: float, dividend: float) -> Optional[float]: ...
+  
+  # ❌ Bad
+  def calculate_yield(price, dividend): ...
+  ```
+- **Explicit Returns**: If a function returns nothing, explicit `-> None` is preferred.
+
+### Documentation (Docstrings)
+- **Google Style**: Use Google-style docstrings for all complex functions.
+- **AI-Readable**: Explain *why* logic exists, not just *what* it does. This helps future Agents understand intent.
+
+### Imports
+- **Grouping**: Standard Lib -> Third Party -> Local Application.
+- **Sorting**: Alphabetical order (or use `isort`).
+- **No Wildcards**: `from module import *` is STRICTLY FORBIDDEN.
+
+### Constants & Magic Numbers
+- **No Magic Numbers**: Do not use hardcoded numbers (e.g. `if ratio > 90`) in logic.
+- **Extraction**: Extract them as clear constants (e.g. `RATIO_THRESHOLD_HIGH = 90`) at the class or module level.
 1. **Test Location**: All debug scripts, temporary test files, and exploration code **MUST** be created in the `tests/` directory.
    - ❌ Do NOT create debug scripts in the project root.
    - ✅ Create `tests/debug_market.py` instead of `debug_market.py`.
