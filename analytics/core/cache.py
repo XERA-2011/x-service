@@ -275,14 +275,23 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
             # 3. 需要刷新数据
             if should_refresh:
                 lock_key = f"refresh:{cache_key}"
-                blocking = not return_stale
+                
+                # 缓存优先策略：用户请求永远不阻塞等待锁
+                # 只有预热任务（有陈旧数据）才尝试非阻塞获取锁刷新
+                if not return_stale:
+                    # Cache Miss: 立即返回"预热中"，不阻塞用户
+                    print(f"⏳ 缓存预热中，返回空响应: {key_prefix}")
+                    return {
+                        "error": "warming_up",
+                        "message": "数据预热中，请稍后刷新",
+                        "_warming_up": True,
+                        "_cached": False,
+                    }
 
+                # 有陈旧数据：尝试非阻塞刷新 (SWR 模式)
                 try:
-                    # 获取锁 (减少阻塞时间，更快返回陈旧数据)
-                    lock = cache.lock(
-                        lock_key, timeout=30, blocking_timeout=2 if blocking else 0
-                    )
-                    acquired = lock.acquire(blocking=blocking)
+                    lock = cache.lock(lock_key, timeout=30, blocking_timeout=0)
+                    acquired = lock.acquire(blocking=False)
 
                     if acquired:
                         try:
@@ -348,18 +357,12 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
                             except redis.RedisError:
                                 pass
                     else:
-                        # 未获取到锁
-                        if return_stale and stale_data is not None:
-                            print(f"🔒 正在刷新中，返回陈旧数据: {key_prefix}")
-                            if isinstance(stale_data, dict):
-                                stale_data["_cached"] = True
-                                stale_data["_stale"] = True
-                            return stale_data
-                        else:
-                            # Cache Miss 且获取锁失败 (超时)
-                            print(f"⚠️ 获取锁超时，强制执行: {key_prefix}")
-                            result = func(*args, **kwargs)
-                            return result
+                        # 未获取到锁，返回陈旧数据（SWR 模式）
+                        print(f"🔒 正在刷新中，返回陈旧数据: {key_prefix}")
+                        if isinstance(stale_data, dict):
+                            stale_data["_cached"] = True
+                            stale_data["_stale"] = True
+                        return stale_data
 
                 except Exception as e:
                     print(f"❌ 缓存刷新异常: {e}")

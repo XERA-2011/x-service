@@ -30,7 +30,8 @@ class MetalsController {
         if (!container) return;
 
         if (data.error) {
-            utils.renderError('gold-silver-ratio', data.error);
+            const msg = data._warming_up ? '数据预热中，请稍后刷新' : data.message || data.error;
+            utils.renderError('gold-silver-ratio', msg);
             return;
         }
 
@@ -42,6 +43,7 @@ class MetalsController {
         const infoBtn = document.getElementById('info-metals-ratio');
         if (infoBtn && data.explanation) {
             infoBtn.onclick = () => utils.showInfoModal('金银比 (Gold/Silver Ratio)', data.explanation);
+            infoBtn.style.display = 'flex';
         }
 
         const advice = ratio.investment_advice;
@@ -100,7 +102,8 @@ class MetalsController {
         if (!container) return;
 
         if (data.error) {
-            utils.renderError(`${metal}-fear-greed`, data.error);
+            const msg = data._warming_up ? '数据预热中，请稍后刷新' : data.message || data.error;
+            utils.renderError(`${metal}-fear-greed`, msg);
             if (indicatorsContainer) indicatorsContainer.innerHTML = '';
             return;
         }
@@ -110,6 +113,7 @@ class MetalsController {
         if (infoBtn && data.explanation) {
             const title = metal === 'gold' ? '黄金恐慌贪婪指数' : '白银恐慌贪婪指数';
             infoBtn.onclick = () => utils.showInfoModal(title, data.explanation);
+            infoBtn.style.display = 'flex';
         }
 
         // Render Score
@@ -171,7 +175,14 @@ class MetalsController {
         const container = document.getElementById('metal-prices');
         if (!container) return;
 
-        if (!data || data.length === 0) {
+        // Handle error/warming_up response
+        if (data && data.error) {
+            const msg = data._warming_up ? '数据预热中，请稍后刷新' : data.message || data.error;
+            utils.renderError('metal-prices', msg);
+            return;
+        }
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
             utils.renderError('metal-prices', '暂无数据');
             return;
         }

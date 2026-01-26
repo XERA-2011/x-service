@@ -291,7 +291,14 @@ class Utils {
     static renderError(containerId, message) {
         const container = document.getElementById(containerId);
         if (container) {
-            container.innerHTML = `<div class="loading error"><i data-lucide="alert-circle" width="16"></i> ${message}</div>`;
+            // Convert warming_up to user-friendly message
+            let displayMessage = message;
+            let icon = 'alert-circle';
+            if (message === 'warming_up' || message === 'warming up') {
+                displayMessage = '数据预热中，请稍后刷新';
+                icon = 'clock';
+            }
+            container.innerHTML = `<div class="loading error"><i data-lucide="${icon}" width="16"></i> ${displayMessage}</div>`;
             if (window.lucide) lucide.createIcons();
         }
     }

@@ -6,7 +6,7 @@ Desc: 有色金属API路由
 """
 
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List
+from typing import Dict, Any
 from ..modules.metals import GoldSilverAnalysis, MetalSpotPrice, GoldFearGreedIndex
 
 router = APIRouter(prefix="/metals", tags=["有色金属"])
@@ -41,7 +41,7 @@ def get_gold_silver_ratio() -> Dict[str, Any]:
 
 
 @router.get("/spot-prices", summary="获取金属现货价格")
-def get_spot_prices() -> List[Dict[str, Any]]:
+def get_spot_prices() -> Any:
     """获取金属现货价格 (SGE)"""
     try:
         return MetalSpotPrice.get_spot_prices()

@@ -476,6 +476,14 @@ body {
     padding: 32px;
     text-align: center;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    /* Ensure full width in block containers */
+    flex: 1;
+    /* Grow in flex containers */
 }
 
 /* Footer */
@@ -522,7 +530,8 @@ footer {
     color: var(--text-secondary);
     cursor: pointer;
     padding: 4px;
-    display: flex;
+    display: none;
+    /* Hidden by default, shown by JS when data loads */
     align-items: center;
     transition: color 0.2s;
 }

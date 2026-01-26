@@ -133,11 +133,13 @@ class CNMarketController {
                     infoBtn.onclick = () => {
                         utils.showInfoModal('板块分析说明', this.sectorExplanation);
                     };
+                    infoBtn.style.display = 'flex';
                 }
                 if (infoBtnLosers) {
                     infoBtnLosers.onclick = () => {
                         utils.showInfoModal('板块分析说明', this.sectorExplanation);
                     };
+                    infoBtnLosers.style.display = 'flex';
                 }
             }
         } catch (error) {
@@ -189,6 +191,7 @@ class CNMarketController {
         const infoBtn = document.getElementById('info-cn-fear');
         if (infoBtn && data.explanation) {
             infoBtn.onclick = () => utils.showInfoModal('恐慌贪婪指数 (CN)', data.explanation);
+            infoBtn.style.display = 'flex';
         }
 
         container.innerHTML = `
@@ -217,7 +220,7 @@ class CNMarketController {
         if (!container) return;
 
         if (!sectors || sectors.length === 0) {
-            container.innerHTML = '<div class="loading">暂无数据</div>';
+            utils.renderError(containerId, '暂无数据');
             return;
         }
 
@@ -274,14 +277,19 @@ class CNMarketController {
         if (!container) return;
 
         if (data.error) {
+            // Disable grid layout for full-width error message
+            container.classList.remove('heat-grid');
             utils.renderError('market-cn-heat', data.error);
             return;
         }
+        // Restore grid layout for normal data
+        container.classList.add('heat-grid');
 
         // Bind Info Button
         const infoBtn = document.getElementById('info-cn-heat');
         if (infoBtn && data.explanation) {
             infoBtn.onclick = () => utils.showInfoModal('市场热度指数', data.explanation);
+            infoBtn.style.display = 'flex';
         }
 
         const html = `
@@ -321,6 +329,7 @@ class CNMarketController {
                 const desc = data.description || '暂无说明 (Description missing in data)';
                 utils.showInfoModal('红利低波动策略', desc);
             };
+            infoBtn.style.display = 'flex';
         } else {
             console.error('CRITICAL: info-cn-dividend button NOT FOUND');
         }
@@ -536,6 +545,7 @@ class CNMarketController {
         const infoBtn = document.getElementById('info-north');
         if (infoBtn) {
             infoBtn.onclick = () => utils.showInfoModal('北向资金', data.description || '北向资金 = 沪股通 + 深股通，反映外资对 A 股的态度');
+            infoBtn.style.display = 'flex';
         }
 
         const { total, signal, details } = data;
@@ -570,7 +580,7 @@ class CNMarketController {
         }
 
         if (!data.events || data.events.length === 0) {
-            container.innerHTML = '<div class="loading">今日无重要经济事件</div>';
+            utils.renderError('macro-calendar', '今日无重要经济事件');
             return;
         }
 

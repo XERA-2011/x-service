@@ -6,7 +6,7 @@ Desc: 美国市场 API 路由
 """
 
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List
+from typing import Dict, Any
 from ..modules.market_us import USFearGreedIndex, USMarketHeat, USTreasury, USMarketLeaders
 
 router = APIRouter(prefix="/market-us", tags=["美国市场"])
@@ -37,7 +37,7 @@ def get_custom_fear_greed() -> Dict[str, Any]:
 
 
 @router.get("/market-heat", summary="获取美国市场板块热度")
-def get_market_heat() -> List[Dict[str, Any]]:
+def get_market_heat() -> Any:
     """
     获取美国市场各板块涨跌幅 (基于 SPDR Sector ETFs)
     """
@@ -48,7 +48,7 @@ def get_market_heat() -> List[Dict[str, Any]]:
 
 
 @router.get("/bond-yields", summary="获取美债收益率")
-def get_bond_yields() -> List[Dict[str, Any]]:
+def get_bond_yields() -> Any:
     """
     获取主要期限美债收益率及倒挂情况
     """

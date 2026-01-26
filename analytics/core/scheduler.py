@@ -14,6 +14,7 @@ from functools import lru_cache
 import akshare as ak
 from .config import settings
 from .utils import get_beijing_time
+from .logger import logger
 
 
 class SmartScheduler:
@@ -406,7 +407,7 @@ def setup_default_jobs():
 
 def initial_warmup():
     """启动时立即执行一次预热"""
-    print("🔥 开始初始缓存预热...")
+    logger.info("🔥 开始初始缓存预热...")
     
     try:
         # 使用线程池或简单顺序执行 (这里为了简单使用顺序，因 warmup_cache 内部有锁且 Server 是异步启动)
@@ -416,27 +417,31 @@ def initial_warmup():
         warmup_cache(CNFearGreedIndex.calculate, symbol="sh000001", days=14)
         warmup_cache(CNMarketHeat.get_market_heat)
         warmup_cache(CNMarketLeaders.get_top_gainers)
-        # warmup_cache(CNMarketLeaders.get_top_losers) # 可选，减少启动时间
+        warmup_cache(CNMarketLeaders.get_top_losers)
+        warmup_cache(CNMarketLeaders.get_sector_leaders)
         
         # US
         warmup_cache(USFearGreedIndex.get_cnn_fear_greed)
+        warmup_cache(USFearGreedIndex.calculate_custom_index)
         warmup_cache(USMarketHeat.get_sector_performance)
+        warmup_cache(USMarketLeaders.get_leaders)
 
         # Metals
         warmup_cache(GoldSilverAnalysis.get_gold_silver_ratio)
+        warmup_cache(MetalSpotPrice.get_spot_prices)
         warmup_cache(GoldFearGreedIndex.calculate)
         from ..modules.metals.fear_greed import SilverFearGreedIndex
         warmup_cache(SilverFearGreedIndex.calculate)
 
-        print("✅ 核心指标预热完成")
+        logger.info("✅ 核心指标预热完成")
         
-        # 后台继续预热次要数据 (如果需要，可以另起线程，但 initial_warmup 本身已经在 thread 中运行)
+        # 后台继续预热次要数据
         warmup_cache(CNDividendStrategy.get_dividend_stocks)
         warmup_cache(CNBonds.get_bond_market_analysis)
         warmup_cache(LPRAnalysis.get_lpr_rates)
         warmup_cache(USTreasury.get_us_bond_yields)
 
     except Exception as e:
-        print(f"❌ 初始预热过程中发生错误: {e}")
+        logger.error(f"❌ 初始预热过程中发生错误: {e}")
     
-    print("🔥 初始缓存预热结束")
+    logger.info("🔥 初始缓存预热结束")

@@ -69,7 +69,7 @@ class USMarketController {
         if (!container) return;
 
         if (!data || data.error) {
-            container.innerHTML = '<div class="loading">暂无数据</div>';
+            utils.renderError(containerId, data && data.error ? data.error : '暂无数据');
             return;
         }
 
@@ -138,6 +138,7 @@ class USMarketController {
                 const infoBtn1 = document.getElementById('info-us-cnn');
                 if (infoBtn1 && cnnData.explanation) {
                     infoBtn1.onclick = () => utils.showInfoModal('恐慌贪婪指数 (CNN)', cnnData.explanation);
+                    infoBtn1.style.display = 'flex';
                 }
 
                 // Robust data extraction
@@ -171,6 +172,7 @@ class USMarketController {
                 const infoBtn2 = document.getElementById('info-us-custom');
                 if (infoBtn2 && customData.explanation) {
                     infoBtn2.onclick = () => utils.showInfoModal('恐慌贪婪指数 (Custom)', customData.explanation);
+                    infoBtn2.style.display = 'flex';
                 }
 
                 const score = customData.score !== undefined ? customData.score : 50;
@@ -197,10 +199,21 @@ class USMarketController {
         const container = document.getElementById('market-us-heat');
         if (!container) return;
 
-        if (!data || data.length === 0) {
+        // Handle error/warming_up response
+        if (data && data.error) {
+            container.classList.remove('heat-grid');
+            utils.renderError('market-us-heat', data.error);
+            return;
+        }
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            container.classList.remove('heat-grid');
             utils.renderError('market-us-heat', '暂无数据');
             return;
         }
+
+        // Restore grid layout
+        container.classList.add('heat-grid');
 
         const html = data.map(item => {
             const change = item.change_pct;
@@ -222,7 +235,13 @@ class USMarketController {
         const container = document.getElementById('us-treasury');
         if (!container) return;
 
-        if (!data || data.length === 0) {
+        // Handle error/warming_up response
+        if (data && data.error) {
+            utils.renderError('us-treasury', data.error);
+            return;
+        }
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
             utils.renderError('us-treasury', '暂无数据');
             return;
         }
@@ -269,7 +288,7 @@ class USMarketController {
 
         const indices = data.indices || [];
         if (indices.length === 0) {
-            container.innerHTML = '<div class="placeholder"><p>暂无指数数据</p></div>';
+            utils.renderError('us-gainers', '暂无指数数据');
             return;
         }
 
