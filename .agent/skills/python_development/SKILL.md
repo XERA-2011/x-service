@@ -74,10 +74,13 @@ Direct calls to `akshare` are **FORBIDDEN** in production code. You MUST use the
    - ❌ Do NOT create debug scripts in the project root.
    - ✅ Create `tests/debug_market.py` instead of `debug_market.py`.
 2. **File Naming**: Debug scripts should be prefixed with `debug_` or `test_`.
+3. **Cleanup**: Temporary test files created for debugging or verification **MUST** be deleted before completing the task.
+   - Do not commit `debug_*.py` files unless they are converted to permanent unit tests.
+   - If a script is valuable, rename it to `test_integration_*.py` and keep it.
 
 ## 6. Python 3.9 Compatibility
 
-> ⚠️ **CRITICAL**: Docker environment uses **Python 3.9**. Python 3.10+ syntax is FORBIDDEN!
+> ⚠️ **CRITICAL**: Docker environment uses **Python 3.9`. Python 3.10+ syntax is FORBIDDEN!
 
 ### Forbidden Syntax
 ```python

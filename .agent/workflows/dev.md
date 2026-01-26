@@ -38,6 +38,7 @@ Before finishing, ask yourself:
 - "If the API fails or times out, will the UI get stuck in 'Loading...'?"
 - "If one part of `Promise.all` fails, will the rest still render?"
 - "Are error messages aligned correctly (centered)?"
+- "Have I cleaned up all temporary test files and debug scripts?"
 
 If the answer is NO, apply fixes immediately.
 

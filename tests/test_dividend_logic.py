@@ -9,6 +9,19 @@ class TestDividendStrategy(unittest.TestCase):
     @patch('analytics.modules.market_cn.dividend.data_provider')
     @patch('analytics.modules.market_cn.dividend.ak')
     def test_roe_calculation(self, mock_ak, mock_dp):
+        # Unwrap the @cached decorator to test logic directly
+        if hasattr(CNDividendStrategy.get_dividend_stocks, "_original"):
+            original_method = CNDividendStrategy.get_dividend_stocks._original
+        else:
+            original_method = CNDividendStrategy.get_dividend_stocks
+            
+        # We need to bind it as a static method if we replace it, 
+        # but here we can just call original_method directly in the test logic?
+        # No, because the code calls CNDividendStrategy.get_dividend_stocks
+        
+        # Actually simplest way: just execute the original method directly for the test
+        # bypassing the class method call since it's static/isolated logic
+        
         # 1. Mock 成分股数据 (增加非银行股)
         mock_cons_df = pd.DataFrame({
             "成分券代码": ["000001", "600036", "600900"],
@@ -31,7 +44,7 @@ class TestDividendStrategy(unittest.TestCase):
         mock_dp.get_stock_zh_a_spot.return_value = mock_spot_df
         
         # 3. 运行策略
-        result = CNDividendStrategy.get_dividend_stocks(limit=10)
+        result = original_method(limit=10)
         
         # 4. 验证结果
         stocks = result['stocks']
