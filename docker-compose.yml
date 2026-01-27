@@ -24,7 +24,7 @@ services:
   # x-analytics 主服务
   x-analytics:
     build: .
-    container_name: x-analytics-app
+    container_name: x-analytics
     ports:
       - "8080:8080"
     environment:
