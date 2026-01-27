@@ -2,7 +2,7 @@ services:
   # Redis 缓存服务
   redis:
     image: redis:7-alpine
-    container_name: x-analytics-redis
+    container_name: xera-redis
     ports:
       - "6379:6379"
     volumes:
@@ -22,9 +22,10 @@ services:
         max-file: "3"
 
   # x-analytics 主服务
-  x-analytics:
+  xanalytics:
     build: .
-    container_name: x-analytics
+    # 使用无横杠名称，避免 Docker Compose 将 x- 前缀误识别为扩展字段 (Extension Fields)
+    container_name: xanalytics
     ports:
       - "8080:8080"
     environment:

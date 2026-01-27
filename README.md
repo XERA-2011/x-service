@@ -10,21 +10,21 @@
 
 ```bash
 # 一键启动 (Redis + App)
-docker-compose up -d --build
+docker compose up -d --build
 
 # 重启
-docker-compose restart x-analytics
+docker compose restart xanalytics
 
 # 清空整个 Redis 数据库
-docker exec x-analytics-redis redis-cli FLUSHDB
+docker exec xera-redis redis-cli FLUSHDB
 
 # 查看日志
-docker-compose logs -f x-analytics
+docker compose logs -f xanalytics
 
 # 访问
 open http://localhost:8080/          # Web 仪表盘
 open http://localhost:8080/docs      # API 文档
 
 # 停止并清空缓存
-docker-compose down -v
+docker compose down -v
 ```
