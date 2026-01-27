@@ -13,7 +13,8 @@ from redis import ConnectionPool
 import time
 import threading
 from functools import wraps
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, Dict
+from datetime import datetime
 from .config import settings
 
 # 缓存版本号：当缓存数据结构变化时递增，自动使旧缓存失效
@@ -214,6 +215,42 @@ def make_cache_key(prefix: str, *args, **kwargs) -> str:
     return f"{settings.CACHE_PREFIX}:{CACHE_VERSION}:{prefix}:{params_hash}"
 
 
+def wrap_response(
+    status: str,
+    data: Optional[Dict[str, Any]] = None,
+    message: Optional[str] = None,
+    cached_at: Optional[float] = None,
+    ttl: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    包装标准化 API 响应格式
+    
+    Args:
+        status: 'ok' | 'warming_up' | 'error'
+        data: 实际数据 (status='ok' 时必填)
+        message: 错误/状态消息 (status != 'ok' 时必填)
+        cached_at: 缓存时间戳 (Unix timestamp)
+        ttl: 剩余有效秒数
+    """
+    response: Dict[str, Any] = {"status": status}
+    
+    if status == "ok" and data is not None:
+        response["data"] = data
+    elif data is not None:
+        response["data"] = data
+    
+    if message:
+        response["message"] = message
+    
+    if cached_at:
+        response["cached_at"] = datetime.fromtimestamp(cached_at).isoformat()
+    
+    if ttl is not None:
+        response["ttl"] = ttl
+    
+    return response
+
+
 def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
     """
     缓存装饰器 (支持防雪崩和陈旧数据返回)
@@ -251,22 +288,39 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
                     real_data = cached_data["data"]
 
                     if now < expire_time:
-                        # 数据新鲜，直接返回
-                        if isinstance(real_data, dict):
-                            real_data["_cached"] = True
-                            real_data["_fresh"] = True
-                        return real_data
+                        # 数据新鲜，返回标准格式
+                        remaining_ttl = int(expire_time - now)
+                        cache_time = cached_data["_meta"].get("cached_at", expire_time - ttl)
+                        
+                        # 检查数据是否包含错误
+                        if isinstance(real_data, dict) and "error" in real_data:
+                            return wrap_response(
+                                status="error",
+                                data=real_data.get("data"),
+                                message=real_data.get("message", real_data.get("error")),
+                                cached_at=cache_time,
+                                ttl=remaining_ttl
+                            )
+                        
+                        return wrap_response(
+                            status="ok",
+                            data=real_data,
+                            cached_at=cache_time,
+                            ttl=remaining_ttl
+                        )
                     else:
                         # 数据陈旧 (但未物理过期)
                         should_refresh = True
                         return_stale = True
                         stale_data = real_data  # 保存陈旧数据以供后续使用
                 else:
-                    # 旧版格式或无元数据，假设新鲜（或依赖 Redis 物理过期）
-                    # 为了兼容，如果正好遇到旧数据，直接返回
-                    if isinstance(cached_data, dict):
-                        cached_data["_cached"] = True
-                    return cached_data
+                    # 旧版格式或无元数据，假设新鲜
+                    if isinstance(cached_data, dict) and "error" in cached_data:
+                        return wrap_response(
+                            status="error",
+                            message=cached_data.get("message", cached_data.get("error"))
+                        )
+                    return wrap_response(status="ok", data=cached_data)
             else:
                 # 无缓存
                 should_refresh = True
@@ -326,6 +380,7 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
                                             val = {
                                                 "_meta": {
                                                     "expire_at": current_now + ttl,
+                                                    "cached_at": current_now,
                                                     "ttl": ttl
                                                 },
                                                 "data": result
@@ -355,16 +410,22 @@ def cached(key_prefix: str, ttl: int = 60, stale_ttl: Optional[int] = None):
 
                 # 主线程立即返回
                 if return_stale:
-                    if isinstance(stale_data, dict):
-                        stale_data["_cached"] = True
-                        stale_data["_stale"] = True
-                    return stale_data
+                    # 返回陈旧数据但标记为 stale
+                    if isinstance(stale_data, dict) and "error" in stale_data:
+                        return wrap_response(
+                            status="error",
+                            message=stale_data.get("message", stale_data.get("error"))
+                        )
+                    return wrap_response(
+                        status="ok",
+                        data=stale_data,
+                        message="数据刷新中"
+                    )
                 else:
-                    return {
-                        "error": "warming_up",
-                        "message": "数据正在后台计算中，请稍后刷新",
-                        "_warming_up": True
-                    }
+                    return wrap_response(
+                        status="warming_up",
+                        message="数据正在后台计算中，请稍后刷新"
+                    )
 
             return None  # Should not reach here
 
@@ -410,7 +471,7 @@ def warmup_cache(func: Callable, *args, **kwargs) -> bool:
 
             key = make_cache_key(prefix, *args, **kwargs)
 
-            val = {"_meta": {"expire_at": now + ttl, "ttl": ttl}, "data": result}
+            val = {"_meta": {"expire_at": now + ttl, "cached_at": now, "ttl": ttl}, "data": result}
             cache.set(key, val, ttl + stale)
             print(f"✅ 缓存预热成功: {prefix}")
             return True

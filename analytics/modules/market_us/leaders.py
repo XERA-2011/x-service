@@ -42,9 +42,12 @@ class USMarketLeaders:
                         current_price = safe_float(latest["close"])
                         prev_close = safe_float(prev["close"])
                         
-                        change_pct: float = 0.0
-                        if prev_close > 0:
-                            change_pct = (current_price - prev_close) / prev_close * 100
+                        # 确保价格数据有效
+                        if current_price is None or prev_close is None or prev_close == 0:
+                            logger.warning(f"⚠️ 指数 {item['name']} 价格数据无效，跳过")
+                            continue
+                        
+                        change_pct = (current_price - prev_close) / prev_close * 100
                             
                         indices_data.append({
                             "name": item["name"],
@@ -53,24 +56,16 @@ class USMarketLeaders:
                             "change_pct": change_pct
                         })
                     else:
-                        # 数据不足，使用空值
-                        indices_data.append({
-                            "name": item["name"], 
-                            "code": item["code"],
-                            "price": 0, 
-                            "change_pct": 0
-                        })
+                        # 数据不足，跳过该指数（不填充假数据）
+                        logger.warning(f"⚠️ 指数 {item['name']} 数据不足，跳过")
+                        continue
                 except Exception as e:
-                    logger.warning(f" 获取指数 {item['name']} 失败: {e}")
-                    indices_data.append({
-                        "name": item["name"], 
-                        "code": item["code"],
-                        "price": 0, 
-                        "change_pct": 0
-                    })
+                    logger.warning(f"⚠️ 获取指数 {item['name']} 失败: {e}")
+                    # 跳过失败的指数，不填充假数据
+                    continue
 
             # 如果全部失败，返回错误而非假数据
-            if all(item["price"] == 0 for item in indices_data):
+            if not indices_data:
                  logger.error("❌ 所有美国指数数据获取失败")
                  return {"error": "无法获取美国指数实时数据"}
 

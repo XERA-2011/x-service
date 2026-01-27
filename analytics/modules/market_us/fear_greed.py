@@ -6,7 +6,7 @@
 import requests
 import akshare as ak
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import safe_float, get_beijing_time, akshare_call_with_retry
@@ -98,20 +98,12 @@ class USFearGreedIndex:
 
     @staticmethod
     def _get_fallback_data(error_msg: str) -> Dict[str, Any]:
-        """获取失败时的默认数据"""
+        """获取失败时返回错误信息，不返回假数据"""
         return {
             "error": error_msg,
-            "current_value": 50,
-            "current_level": "数据获取失败",
+            "message": "无法获取CNN恐慌贪婪指数",
             "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
-            "explanation": USFearGreedIndex._get_cnn_explanation(),
         }
-
-    # ... (Keep existing custom index calculation and helper methods) ...
-    # 为了保持简洁，我只覆盖 get_cnn_fear_greed 方法。
-    # 实际上由于是 write_to_file Overwrite=true，我必须包含整个文件内容。
-    # 让我把原来的 calculate_custom_index 等方法加回来。
-
     @staticmethod
     @cached(
         "market_us:custom_fear_greed",
@@ -135,6 +127,16 @@ class USFearGreedIndex:
             }
 
             composite_score = USFearGreedIndex._calculate_composite_score(indicators)
+            
+            # 如果无法计算综合得分（所有指标都失败），返回错误
+            if composite_score is None:
+                return {
+                    "error": "无法获取足够的指标数据",
+                    "message": "所有指标获取失败",
+                    "indicators": indicators,
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            
             level, description = USFearGreedIndex._get_level_description(
                 composite_score
             )
@@ -149,11 +151,10 @@ class USFearGreedIndex:
             }
 
         except Exception as e:
-            logger.error(f" 计算自定义恐慌贪婪指数失败: {e}")
+            logger.error(f"❌ 计算自定义恐慌贪婪指数失败: {e}")
             return {
                 "error": str(e),
-                "score": 50,
-                "level": "中性",
+                "message": "无法计算自定义恐慌贪婪指数",
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
             }
 
@@ -162,8 +163,10 @@ class USFearGreedIndex:
         try:
             df = akshare_call_with_retry(ak.index_vix)
             if df.empty:
-                return {"value": 20, "score": 50, "weight": 0.3}
+                return {"error": "VIX数据为空", "weight": 0.3}
             latest_vix = safe_float(df.iloc[-1]["VIX"])
+            if latest_vix is None:
+                return {"error": "VIX数据解析失败", "weight": 0.3}
             if latest_vix > 30:
                 vix_score = max(0, 100 - (latest_vix - 30) * 3)
             elif latest_vix > 20:
@@ -176,8 +179,9 @@ class USFearGreedIndex:
                 "score": round(vix_score, 1),
                 "weight": 0.3,
             }
-        except Exception:
-            return {"value": 20, "score": 50, "weight": 0.3}
+        except Exception as e:
+            logger.warning(f"⚠️ 获取VIX数据失败: {e}")
+            return {"error": str(e), "weight": 0.3}
 
 
     @staticmethod
@@ -187,7 +191,7 @@ class USFearGreedIndex:
             # 使用 AkShare 获取标普500指数数据
             df = akshare_call_with_retry(ak.stock_us_index_daily_em, symbol="GSPC")
             if df.empty or len(df) < 20:
-                return {"momentum_pct": 0, "score": 50, "weight": 0.25, "note": "数据不足"}
+                return {"error": "数据不足", "weight": 0.25}
             
             # 计算20日动量
             recent = df.tail(20)
@@ -206,8 +210,8 @@ class USFearGreedIndex:
                 "weight": 0.25,
             }
         except Exception as e:
-            logger.warning(f" 获取标普500数据失败: {e}")
-            return {"momentum_pct": 0, "score": 50, "weight": 0.25, "note": "获取失败"}
+            logger.warning(f"⚠️ 获取标普500数据失败: {e}")
+            return {"error": str(e), "weight": 0.25}
 
     @staticmethod
     def _get_market_breadth() -> Dict[str, Any]:
@@ -221,7 +225,7 @@ class USFearGreedIndex:
             ndx = akshare_call_with_retry(ak.stock_us_index_daily_em, symbol="NDX")
             
             if dji.empty or ndx.empty:
-                return {"advance_decline_ratio": 1.0, "score": 50, "weight": 0.2, "note": "数据不足"}
+                return {"error": "数据不足", "weight": 0.2}
             
             # 比较近5日表现
             dji_change = (dji["收盘"].iloc[-1] - dji["收盘"].iloc[-5]) / dji["收盘"].iloc[-5] * 100
@@ -238,8 +242,8 @@ class USFearGreedIndex:
                 "weight": 0.2,
             }
         except Exception as e:
-            logger.warning(f" 获取市场广度数据失败: {e}")
-            return {"advance_decline_ratio": 1.0, "score": 50, "weight": 0.2, "note": "获取失败"}
+            logger.warning(f"⚠️ 获取市场广度数据失败: {e}")
+            return {"error": str(e), "weight": 0.2}
 
     @staticmethod
     def _get_safe_haven_demand() -> Dict[str, Any]:
@@ -260,19 +264,35 @@ class USFearGreedIndex:
                 "weight": 0.25,
                 "note": "基于VIX推算",
             }
-        except Exception:
-             return {"score": 50, "weight": 0.25, "note": "获取失败"}
+        except Exception as e:
+            logger.warning(f"⚠️ 获取避险需求数据失败: {e}")
+            return {"error": str(e), "weight": 0.25}
 
     @staticmethod
-    def _calculate_composite_score(indicators: Dict[str, Any]) -> float:
+    def _calculate_composite_score(indicators: Dict[str, Any]) -> Optional[float]:
+        """计算综合得分，跳过有错误的指标"""
         total_score: float = 0.0
         total_weight: float = 0.0
+        valid_count = 0
+        
         for indicator in indicators.values():
-            score = safe_float(indicator.get("score", 50))
+            # 跳过有错误的指标
+            if "error" in indicator:
+                continue
+            
+            score = safe_float(indicator.get("score"))
             weight = safe_float(indicator.get("weight", 0))
-            total_score += score * weight
-            total_weight += weight
-        return total_score / total_weight if total_weight > 0 else 50
+            
+            if score is not None and weight > 0:
+                total_score += score * weight
+                total_weight += weight
+                valid_count += 1
+        
+        # 如果没有有效指标，返回 None 而非假数据
+        if total_weight == 0 or valid_count == 0:
+            return None
+        
+        return total_score / total_weight
 
     @staticmethod
     def _get_level_description(score: float) -> tuple:

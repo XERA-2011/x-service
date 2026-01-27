@@ -60,11 +60,10 @@ class CNMarketHeat:
             return heat_data
 
         except Exception as e:
-            logger.error(f" 获取市场热度失败: {e}")
+            logger.error(f"❌ 获取市场热度失败: {e}")
             return {
                 "error": str(e),
-                "heat_score": 50,
-                "heat_level": "中等",
+                "message": "无法获取市场热度数据",
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
             }
 

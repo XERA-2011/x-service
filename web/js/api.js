@@ -89,7 +89,10 @@ class API {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            return await response.json();
+            const json = await response.json();
+
+            // 处理标准化响应格式
+            return this.unwrapResponse(json);
         } catch (error) {
             if (timeoutId) clearTimeout(timeoutId);
 
@@ -100,6 +103,68 @@ class API {
 
             console.error(`API请求失败 [${endpoint}]:`, error);
             throw error;
+        }
+    }
+
+    /**
+     * 解包标准化 API 响应
+     * @param {Object} response - API 响应 {status, data, message, cached_at, ttl}
+     * @returns {Object} 解包后的数据或带有 _warming_up/_error 标记的对象
+     */
+    unwrapResponse(response) {
+        // 兼容旧格式 (没有 status 字段)
+        if (!response.status) {
+            // 检查是否是旧格式的 warming_up
+            if (response.error === 'warming_up' || response._warming_up) {
+                return {
+                    _warming_up: true,
+                    message: response.message || '数据预热中'
+                };
+            }
+            // 检查是否是旧格式的错误
+            if (response.error) {
+                return {
+                    _error: true,
+                    error: response.error,
+                    message: response.message || response.error
+                };
+            }
+            // 旧格式正常数据，直接返回
+            return response;
+        }
+
+        // 新标准化格式
+        switch (response.status) {
+            case 'ok':
+                // 返回数据，附加元信息
+                const data = response.data || {};
+                if (typeof data === 'object') {
+                    data._cached_at = response.cached_at;
+                    data._ttl = response.ttl;
+                    if (response.message) {
+                        data._stale = true;
+                    }
+                }
+                return data;
+
+            case 'warming_up':
+                return {
+                    _warming_up: true,
+                    error: 'warming_up',
+                    message: response.message || '数据预热中，请稍后刷新'
+                };
+
+            case 'error':
+                return {
+                    _error: true,
+                    error: response.message || '数据获取失败',
+                    message: response.message,
+                    data: response.data
+                };
+
+            default:
+                console.warn(`未知的响应状态: ${response.status}`);
+                return response.data || response;
         }
     }
 

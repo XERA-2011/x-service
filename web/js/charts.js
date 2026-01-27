@@ -37,8 +37,14 @@ class Charts {
 
         const chart = echarts.init(container);
 
-        const score = data.score || 50;
-        const level = data.level || '中性';
+        const score = data.score ?? data.current_value;
+        const level = data.level || data.current_level || '未知';
+
+        // 如果没有分数数据，不渲染图表
+        if (score == null) {
+            container.innerHTML = '<div class="loading error">数据不可用</div>';
+            return null;
+        }
 
         // 根据分数确定颜色
         let color;

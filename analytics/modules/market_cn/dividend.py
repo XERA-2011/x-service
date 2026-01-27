@@ -57,28 +57,15 @@ class CNDividendStrategy:
                 logger.warning(f" 获取实时行情失败，使用基础数据: {e}")
                 spot_df = None
             
-            # 如果无法获取行情，返回基础成分股信息
+            # 如果无法获取行情，返回错误状态（不返回无效数据）
             if spot_df is None:
-                logger.info("⚠️ 无法获取实时行情，返回基础成分股信息")
-                stocks = []
-                for code in cons_codes[:limit]:
-                    code_str = str(code).zfill(6)
-                    stocks.append({
-                        "code": code_str,
-                        "name": cons_names.get(code, cons_names.get(code_str, "--")),
-                        "weight": safe_float(cons_weights.get(code, cons_weights.get(code_str, 0))),
-                        "price": None,
-                        "change_pct": None,
-                    })
+                logger.warning("❌ 无法获取实时行情，返回错误")
                 return {
+                    "error": "实时行情数据暂不可用",
+                    "message": "无法获取股票实时行情，请稍后重试",
                     "index_code": INDEX_CODE,
                     "index_name": INDEX_NAME,
-                    "stocks": stocks,
-                    "count": len(stocks),
-                    "total_constituents": len(cons_codes),
                     "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
-                    "note": "实时行情暂不可用，仅显示成分股基础信息",
-                    "description": CNDividendStrategy._get_strategy_description(),
                 }
             
             # 3. 筛选成分股行情
@@ -89,26 +76,14 @@ class CNDividendStrategy:
             filtered_df = spot_df[spot_df["代码_clean"].isin(cons_codes_clean)].copy()
             
             if filtered_df.empty:
-                # 如果匹配失败，返回基础信息
-                logger.info("⚠️ 无法匹配实时行情，返回基础成分股信息")
-                stocks = []
-                for code in cons_codes[:limit]:
-                    code_str = str(code).zfill(6)
-                    stocks.append({
-                        "code": code_str,
-                        "name": cons_names.get(code, cons_names.get(code_str, "--")),
-                        "weight": safe_float(cons_weights.get(code, cons_weights.get(code_str, 0))),
-                        "price": None,
-                        "change_pct": None,
-                    })
+                # 如果匹配失败，返回错误状态（不返回无效数据）
+                logger.warning("❌ 无法匹配成分股行情，返回错误")
                 return {
+                    "error": "无法匹配成分股行情数据",
+                    "message": "成分股行情匹配失败，请稍后重试",
                     "index_code": INDEX_CODE,
                     "index_name": INDEX_NAME,
-                    "stocks": stocks,
-                    "count": len(stocks),
-                    "total_constituents": len(cons_codes),
                     "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
-                    "description": CNDividendStrategy._get_strategy_description(),
                 }
             
             # 4. 添加权重列

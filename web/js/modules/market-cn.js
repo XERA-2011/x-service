@@ -123,28 +123,27 @@ class CNMarketController {
             this.gainersData = gainers.sectors || [];
             this.losersData = losers.sectors || [];
 
-            // Store explanation for info button
-            this.sectorExplanation = gainers.explanation || '';
+            // Store explanation for info button (分别存储领涨和领跌的说明)
+            this.gainersExplanation = gainers.explanation || '';
+            this.losersExplanation = losers.explanation || '';
 
             this.renderCNLeaders(gainers, losers);
 
-            // Bind info button events (both gainers and losers use same explanation)
+            // Bind info button events (使用各自的说明)
             const infoBtn = document.getElementById('info-cn-sectors');
             const infoBtnLosers = document.getElementById('info-cn-sectors-losers');
 
-            if (this.sectorExplanation) {
-                if (infoBtn) {
-                    infoBtn.onclick = () => {
-                        utils.showInfoModal('板块分析说明', this.sectorExplanation);
-                    };
-                    infoBtn.style.display = 'flex';
-                }
-                if (infoBtnLosers) {
-                    infoBtnLosers.onclick = () => {
-                        utils.showInfoModal('板块分析说明', this.sectorExplanation);
-                    };
-                    infoBtnLosers.style.display = 'flex';
-                }
+            if (this.gainersExplanation && infoBtn) {
+                infoBtn.onclick = () => {
+                    utils.showInfoModal('板块分析说明', this.gainersExplanation);
+                };
+                infoBtn.style.display = 'flex';
+            }
+            if (this.losersExplanation && infoBtnLosers) {
+                infoBtnLosers.onclick = () => {
+                    utils.showInfoModal('板块分析说明', this.losersExplanation);
+                };
+                infoBtnLosers.style.display = 'flex';
             }
         } catch (error) {
             console.error('加载领涨领跌板块失败:', error);

@@ -7,7 +7,7 @@ import akshare as ak
 import pandas as pd
 import numpy as np
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import safe_float, get_beijing_time, akshare_call_with_retry
@@ -52,9 +52,26 @@ class CNFearGreedIndex:
 
             # 计算各项指标
             indicators = CNFearGreedIndex._calculate_indicators(recent_data, symbol)
+            
+            # 如果指标计算失败，返回错误
+            if "error" in indicators:
+                return {
+                    "error": indicators["error"],
+                    "message": "无法计算指标数据",
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                }
 
             # 计算综合指数 (0-100)
             fear_greed_score = CNFearGreedIndex._calculate_composite_score(indicators)
+            
+            # 如果无法计算综合得分，返回错误
+            if fear_greed_score is None:
+                return {
+                    "error": "无法计算综合得分",
+                    "message": "指标数据不足",
+                    "indicators": indicators,
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                }
 
             # 确定等级
             level, description = CNFearGreedIndex._get_level_description(
@@ -73,12 +90,10 @@ class CNFearGreedIndex:
             }
 
         except Exception as e:
-            logger.error(f" 计算恐慌贪婪指数失败: {e}")
+            logger.error(f"❌ 计算恐慌贪婪指数失败: {e}")
             return {
                 "error": str(e),
-                "score": 50,  # 默认中性
-                "level": "中性",
-                "description": "数据获取失败，显示默认值",
+                "message": "无法计算恐慌贪婪指数",
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
             }
 
@@ -128,7 +143,8 @@ class CNFearGreedIndex:
                     "weight": 0.15,
                 }
             else:
-                indicators["volume"] = {"value": 0, "score": 50, "weight": 0.15}
+                # 成交量数据不可用，跳过该指标（不填充假数据）
+                logger.warning("⚠️ 成交量数据不可用，跳过 volume 指标")
 
             # 4. RSI指标 - 权重20%
             rsi = CNFearGreedIndex._calculate_rsi(data["close"])
@@ -159,20 +175,14 @@ class CNFearGreedIndex:
             }
 
         except Exception as e:
-            logger.warning(f" 计算指标时出错: {e}")
-            # 返回默认值
-            indicators = {
-                "price_momentum": {"value": 0, "score": 50, "weight": 0.25},
-                "volatility": {"value": 20, "score": 50, "weight": 0.20},
-                "volume": {"value": 0, "score": 50, "weight": 0.15},
-                "rsi": {"value": 50, "score": 50, "weight": 0.20},
-                "market_breadth": {"value": 0.5, "score": 50, "weight": 0.20},
-            }
+            logger.warning(f"⚠️ 计算指标时出错: {e}")
+            # 返回错误而非假数据
+            return {"error": str(e)}
 
         return indicators
 
     @staticmethod
-    def _calculate_rsi(prices: pd.Series, period: int = 14) -> float:
+    def _calculate_rsi(prices: pd.Series, period: int = 14) -> Optional[float]:
         """计算RSI指标"""
         try:
             delta = prices.diff()
@@ -180,23 +190,39 @@ class CNFearGreedIndex:
             loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
-            return rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else 50
+            return rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else None
         except Exception:
-            return 50
+            return None
 
     @staticmethod
-    def _calculate_composite_score(indicators: Dict[str, Any]) -> float:
-        """计算综合得分"""
+    def _calculate_composite_score(indicators: Dict[str, Any]) -> Optional[float]:
+        """计算综合得分，跳过有错误的指标"""
+        # 如果指标本身是错误，返回 None
+        if "error" in indicators:
+            return None
+        
         total_score: float = 0.0
         total_weight: float = 0.0
+        valid_count = 0
 
         for indicator in indicators.values():
-            score = safe_float(indicator.get("score", 50))
+            # 跳过有错误的指标
+            if "error" in indicator:
+                continue
+            
+            score = safe_float(indicator.get("score"))
             weight = safe_float(indicator.get("weight", 0))
-            total_score += score * weight
-            total_weight += weight
+            
+            if score is not None and weight > 0:
+                total_score += score * weight
+                total_weight += weight
+                valid_count += 1
 
-        return total_score / total_weight if total_weight > 0 else 50
+        # 如果没有有效指标，返回 None
+        if total_weight == 0 or valid_count == 0:
+            return None
+        
+        return total_score / total_weight
 
     @staticmethod
     def _get_level_description(score: float) -> tuple:

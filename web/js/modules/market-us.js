@@ -73,9 +73,14 @@ class USMarketController {
             return;
         }
 
-        const score = data.current_value || data.score || 50;
-        const level = data.current_level || data.level || '中性';
-        const indicators = data.indicators;
+        const score = data.current_value ?? data.score;
+        const level = data.current_level || data.level;
+
+        // 如果没有分数数据，显示错误而非默认值
+        if (score == null) {
+            utils.renderError(containerId, '恐慌指数数据不可用');
+            return;
+        }
 
         let contentHtml = `
             <div class="fg-gauge" id="${containerId}-gauge"></div>
@@ -141,10 +146,16 @@ class USMarketController {
                     infoBtn1.style.display = 'flex';
                 }
 
-                // Robust data extraction
-                const score = cnnData.score !== undefined ? cnnData.score : (cnnData.current_value !== undefined ? cnnData.current_value : 50);
-                const level = cnnData.level || cnnData.current_level || '中性';
-                const change = cnnData.change_pct !== undefined ? cnnData.change_pct : (cnnData.change_1d || 0);
+                // Robust data extraction - 不使用默认值50
+                const score = cnnData.score ?? cnnData.current_value;
+                const level = cnnData.level || cnnData.current_level || '未知';
+                const change = cnnData.change_pct ?? cnnData.change_1d ?? 0;
+
+                // 如果没有分数，显示错误
+                if (score == null) {
+                    utils.renderError('us-cnn-fear', '恐慌指数数据不可用');
+                    return;
+                }
 
                 cnnContainer.innerHTML = `
                     <div class="fg-gauge" id="us-cnn-gauge"></div>
@@ -175,8 +186,14 @@ class USMarketController {
                     infoBtn2.style.display = 'flex';
                 }
 
-                const score = customData.score !== undefined ? customData.score : 50;
-                const level = customData.level || '中性';
+                const score = customData.score;
+                const level = customData.level || '未知';
+
+                // 如果没有分数，显示错误
+                if (score == null) {
+                    utils.renderError('us-custom-fear', '恐慌指数数据不可用');
+                    return;
+                }
 
                 customContainer.innerHTML = `
                     <div class="fg-gauge" id="us-custom-gauge"></div>

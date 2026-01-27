@@ -7,7 +7,7 @@ import akshare as ak
 import pandas as pd
 import numpy as np
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from ...core.cache import cached
 from ...core.config import settings
 from ...core.utils import get_beijing_time, akshare_call_with_retry
@@ -44,8 +44,25 @@ class BaseMetalFearGreedIndex:
             # 计算各项指标
             indicators = cls._calculate_indicators(df)
             
+            # 如果指标计算失败，返回错误
+            if not indicators:
+                return {
+                    "error": "无法计算技术指标",
+                    "message": f"无法计算{name}恐慌贪婪指数",
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            
             # 计算综合得分
             score = cls._calculate_composite_score(indicators)
+            
+            # 如果无法计算综合得分，返回错误
+            if score is None:
+                return {
+                    "error": "无法计算综合得分",
+                    "message": "指标数据不足",
+                    "indicators": indicators,
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                }
             
             # 等级描述
             level, description = cls._get_level_description(score)
@@ -60,12 +77,10 @@ class BaseMetalFearGreedIndex:
             }
 
         except Exception as e:
-            logger.error(f" 计算{name}恐慌贪婪指数失败: {e}")
+            logger.error(f"❌ 计算{name}恐慌贪婪指数失败: {e}")
             return {
                 "error": str(e),
-                "score": 50,
-                "level": "中性",
-                "description": "数据获取失败",
+                "message": f"无法计算{name}恐慌贪婪指数",
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S")
             }
 
@@ -149,22 +164,33 @@ class BaseMetalFearGreedIndex:
         return indicators
 
     @staticmethod
-    def _calculate_rsi(series: pd.Series, period: int = 14) -> float:
+    def _calculate_rsi(series: pd.Series, period: int = 14) -> Optional[float]:
         delta = series.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        return rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else 50.0
+        return rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else None
 
     @staticmethod
-    def _calculate_composite_score(indicators: Dict[str, Any]) -> float:
+    def _calculate_composite_score(indicators: Dict[str, Any]) -> Optional[float]:
+        """计算综合得分，如果没有有效指标返回 None"""
+        if not indicators:
+            return None
+        
         total_score, total_weight = 0.0, 0.0
+        valid_count = 0
+        
         for k, v in indicators.items():
             if "score" in v and "weight" in v:
                 total_score += v["score"] * v["weight"]
                 total_weight += v["weight"]
-        return total_score / total_weight if total_weight > 0 else 50.0
+                valid_count += 1
+        
+        if total_weight == 0 or valid_count == 0:
+            return None
+        
+        return total_score / total_weight
 
     @staticmethod
     def _get_level_description(score: float) -> tuple:

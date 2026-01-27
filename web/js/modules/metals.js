@@ -30,10 +30,16 @@ class MetalsController {
         if (!container) return;
 
         if (data.error) {
-            const msg = data._warming_up ? '数据预热中，请稍后刷新' : data.message || data.error;
-            utils.renderError('gold-silver-ratio', msg);
+            if (data._warming_up) {
+                utils.renderWarmingUp('gold-silver-ratio');
+            } else {
+                utils.renderError('gold-silver-ratio', data.message || data.error);
+            }
             return;
         }
+
+        // Clear warming up timer on successful data load
+        utils.clearWarmingUpTimer('gold-silver-ratio');
 
         const ratio = data.ratio;
         // const gold = data.gold; // Unused

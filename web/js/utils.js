@@ -300,6 +300,47 @@ class Utils {
             }
             container.innerHTML = `<div class="loading error"><i data-lucide="${icon}" width="16"></i> ${displayMessage}</div>`;
             if (window.lucide) lucide.createIcons();
+            // Clear any existing warming up timer
+            Utils.clearWarmingUpTimer(containerId);
+        }
+    }
+
+    /**
+     * Render warming up state with automatic timeout
+     * Per project standards: warming_up state max 60 seconds, then convert to error
+     * @param {string} containerId - Container element ID
+     * @param {number} timeoutMs - Timeout in milliseconds (default 60000)
+     */
+    static renderWarmingUp(containerId, timeoutMs = 60000) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Clear any existing timer first
+        Utils.clearWarmingUpTimer(containerId);
+
+        container.innerHTML = `<div class="loading warming-up"><i data-lucide="clock" width="16"></i> 数据预热中，请稍后刷新</div>`;
+        if (window.lucide) lucide.createIcons();
+
+        // Store timer ID on container dataset for cleanup
+        const timerId = setTimeout(() => {
+            // Check if still showing warming-up (not replaced by real data)
+            if (container.querySelector('.warming-up')) {
+                Utils.renderError(containerId, '数据暂时不可用，请稍后重试');
+            }
+        }, timeoutMs);
+
+        container.dataset.warmupTimer = timerId;
+    }
+
+    /**
+     * Clear warming up timer if data loaded successfully
+     * @param {string} containerId - Container element ID
+     */
+    static clearWarmingUpTimer(containerId) {
+        const container = document.getElementById(containerId);
+        if (container?.dataset?.warmupTimer) {
+            clearTimeout(parseInt(container.dataset.warmupTimer));
+            delete container.dataset.warmupTimer;
         }
     }
 
