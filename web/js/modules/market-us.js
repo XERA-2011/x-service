@@ -235,29 +235,128 @@ class USMarketController {
             return;
         }
 
-        if (!data || !Array.isArray(data) || data.length === 0) {
+        if (!data) {
             utils.renderError('us-treasury', '暂无数据');
             return;
         }
 
-        const html = `
-            <div class="bond-scroll">
-                ${data.map(item => {
+        // Bind Info Button
+        const infoBtn = document.getElementById('info-us-treasury');
+        if (infoBtn) {
+            infoBtn.onclick = () => utils.showInfoModal('美债收益率指标说明',
+                `1. 收益率曲线倒挂 (10Y-2Y)
+当2年期(短期)收益率高于10年期(长期)时，称为倒挂。这是历史上预测经济衰退最准确的指标之一。
+
+2. 10年期国债收益率 (10Y)
+全球资产定价的锚。收益率过高(>4.5%)会显著压制权益类资产估值。
+
+3. 变动速率
+短期内收益率的剧烈飙升往往伴随着市场的恐慌性抛售（股债双杀）。
+
+4. 市场利率平稳
+当收益率曲线未倒挂、长期利率未过高且单日波动较小时，显示为平稳。这是利好股市估值的舒适区间。
+
+5. 30年期国债 (30Y)
+反映市场对超长期通胀和国家债务风险的看法。若显著高于10年期，通常隐含了期限溢价（Term Premium）的上升。`);
+            infoBtn.style.display = 'flex';
+        }
+
+        // Support both old (Array) and new (Object) formats
+        let metrics = [];
+        let analysis = null;
+
+        if (Array.isArray(data)) {
+            metrics = data;
+        } else if (data.metrics) {
+            metrics = data.metrics;
+            analysis = data.analysis;
+        } else {
+            // Fallback for unexpected format
+            utils.renderError('us-treasury', '数据格式错误');
+            return;
+        }
+
+        if (metrics.length === 0) {
+            utils.renderError('us-treasury', '暂无数据');
+            return;
+        }
+
+        // 提取关键指标以便特定布局
+        const tenYear = metrics.find(m => m.name.includes('10年'));
+        const spread = metrics.find(m => m.is_spread);
+        const twoYear = metrics.find(m => m.name.includes('2年'));
+        const thirtyYear = metrics.find(m => m.name.includes('30年'));
+
+        // 辅助函数：生成网格单元格
+        const renderCell = (item, isPrimary = false) => {
+            if (!item) return '';
+
+            // 颜色逻辑: 
+            // 收益率: US Market Logic (Up=Green, Down=Red) is for prices. 
+            // For Yields in US context: 
+            // Rising Yields = Bad for Stocks (Red)? Or Rising = Green?
+            // Usually, Financial Data Terminals show Up=Green for Yields too.
+            // Let's stick to standard change format.
+            let changeHtml = '';
+            if (item.change !== undefined) {
+                const changeClass = item.change > 0 ? 'text-up-us' : item.change < 0 ? 'text-down-us' : '';
+                const sign = item.change > 0 ? '+' : '';
+                changeHtml = `<div class="item-change ${changeClass}">${sign}${item.change}</div>`; // BP or raw value? API returns raw value change
+            }
+
+            // 特殊处理利差颜色
             let valClass = '';
             if (item.is_spread) {
-                valClass = item.value < 0 ? 'text-down' : 'text-up';
+                // 利差倒挂(负数)为警示红
+                valClass = item.value < 0 ? 'text-down-us' : 'text-up-us';
+                changeHtml = `<div class="item-sub">衰退预警</div>`; // Hardcode styling for spread
             }
-            return `
-                        <div class="bond-item">
-                            <span class="bond-name">${item.name}</span>
-                            <span class="bond-rate ${valClass}">${item.value}${item.suffix || ''}</span>
-                        </div>
-                    `;
-        }).join('')}
-            </div>
-        `;
 
-        container.innerHTML = html;
+            return `
+                <div class="heat-cell" style="${isPrimary ? 'background: var(--bg-subtle);' : ''}">
+                    <div class="item-sub">${item.name}</div>
+                    <div class="heat-val ${valClass}" style="font-size: ${isPrimary ? '18px' : '16px'}">${item.value}${item.suffix || ''}</div>
+                    ${changeHtml}
+                </div>
+            `;
+        };
+
+        let gridHtml = '';
+
+        // 如果找到了特定的 Key Items，使用优化的 2x2 布局
+        if (tenYear && spread && twoYear && thirtyYear) {
+            gridHtml = `
+                <div class="heat-grid">
+                    ${renderCell(tenYear, true)}
+                    ${renderCell(spread, true)}
+                    ${renderCell(twoYear)}
+                    ${renderCell(thirtyYear)}
+                </div>
+            `;
+        } else {
+            // Fallback to simple grid for whatever metrics we have
+            gridHtml = `
+                <div class="heat-grid">
+                    ${metrics.map(m => renderCell(m)).join('')}
+                </div>
+            `;
+        }
+
+        let analysisHtml = '';
+        if (analysis && analysis.text) {
+            let colorStyle = 'color: var(--text-secondary);';
+            if (analysis.level === 'danger') colorStyle = 'color: var(--accent-red); font-weight: 600;';
+            if (analysis.level === 'warning') colorStyle = 'color: #f59e0b; font-weight: 600;';
+
+            analysisHtml = `
+                <div style="padding: 10px; text-align: center; font-size: 12px; ${colorStyle} border-top: 1px solid var(--border-light); margin-top: -1px; background: #fff; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;">
+                    ${analysis.text}
+                </div>
+             `;
+        }
+
+        container.innerHTML = gridHtml + analysisHtml;
+        container.style.display = 'block'; // Ensure container is block for grid
     }
 
     renderUSLeaders(data) {

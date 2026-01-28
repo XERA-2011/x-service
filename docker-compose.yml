@@ -31,9 +31,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - TZ=Asia/Shanghai
-      # 管理 API Token（生产环境请设置为随机字符串）
-      # 使用方式: curl -H "X-Admin-Token: your-token" ...
-      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+
     volumes:
       - .:/app
     depends_on:

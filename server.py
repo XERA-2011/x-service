@@ -20,13 +20,7 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时
     logger.info("🚀 x-analytics 服务启动中...")
-    
-    # 安全配置检查
-    admin_token = os.getenv("ADMIN_TOKEN")
-    if admin_token:
-        logger.info("🔐 管理 API 保护已启用")
-    else:
-        logger.warning("ADMIN_TOKEN 未设置，管理 API 将被禁用")
+
 
     # 检查 Redis 连接
     if cache.connected:
@@ -76,7 +70,7 @@ app.add_middleware(
     allow_origins=[],  # 空列表 = 仅同源请求
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["X-Admin-Token"],  # 仅允许必要的自定义头
+    allow_headers=[],  # 仅允许必要的自定义头
 )
 
 # -----------------------------------------------------------------------------

@@ -72,10 +72,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     3. 管理 API Token 验证
     """
     
-    def __init__(self, app, admin_token: Optional[str] = None):
+    def __init__(self, app):
         super().__init__(app)
-        # 从环境变量获取管理 Token
-        self.admin_token = admin_token or os.getenv("ADMIN_TOKEN")
     
     async def dispatch(self, request: Request, call_next: Callable):
         path = request.url.path
@@ -83,16 +81,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         
         # 1. 检查是否为管理 API
         if any(path.startswith(p) for p in ADMIN_API_PATHS):
-            # 验证 Admin Token
-            if not self._verify_admin_token(request):
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": "Forbidden",
-                        "message": "Invalid or missing admin token",
-                    }
-                )
-            
             # 管理 API 限流
             if not admin_limiter.is_allowed(client_ip):
                 return JSONResponse(
@@ -134,17 +122,3 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Remaining"] = str(remaining)
         
         return response
-    
-    def _verify_admin_token(self, request: Request) -> bool:
-        """验证管理 Token"""
-        # 如果没有配置 Token，拒绝所有管理请求
-        if not self.admin_token:
-            return False
-        
-        # 从请求头获取 Token
-        provided_token = request.headers.get("X-Admin-Token")
-        if not provided_token:
-            return False
-        
-        # 时间安全比较
-        return self.admin_token == provided_token
