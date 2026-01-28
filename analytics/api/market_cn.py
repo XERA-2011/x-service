@@ -14,7 +14,7 @@ from ..modules.market_cn import (
     CNIndices,
 )
 
-router = APIRouter(prefix="/market-cn", tags=["中国市场"])
+router = APIRouter(tags=["中国市场"])
 
 
 @router.get("/fear-greed", summary="获取恐慌贪婪指数")

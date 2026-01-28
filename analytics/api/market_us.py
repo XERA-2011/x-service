@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 from ..modules.market_us import USFearGreedIndex, USMarketHeat, USTreasury, USMarketLeaders
 
-router = APIRouter(prefix="/market-us", tags=["美国市场"])
+router = APIRouter(tags=["美国市场"])
 
 
 @router.get("/fear-greed", summary="获取CNN恐慌贪婪指数")

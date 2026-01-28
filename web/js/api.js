@@ -210,6 +210,11 @@ class API {
         return this.request('/market-cn/bonds/analysis');
     }
 
+    // 香港市场 API
+    async getHKIndices() {
+        return this.request('/market-hk/indices');
+    }
+
     async getCNIndices() {
         return this.request('/market-cn/indices');
     }

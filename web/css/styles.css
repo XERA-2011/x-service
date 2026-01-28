@@ -486,6 +486,11 @@ body {
     /* Grow in flex containers */
 }
 
+/* Ensure loading/error messages in grid layouts span full width */
+.heat-grid .loading {
+    grid-column: 1 / -1;
+}
+
 /* Footer */
 footer {
     border-top: 1px solid var(--border-light);
@@ -662,6 +667,7 @@ footer {
     color: var(--text-secondary);
     font-size: 11px;
 }
+
 .index-item {
     background: #fff;
     padding: 12px;

@@ -10,6 +10,7 @@ class App {
         // Controllers
         this.modules = {
             'market-cn': new CNMarketController(),
+            'market-hk': new HKMarketController(),
             'market-us': new USMarketController(),
             'metals': new MetalsController()
         };
@@ -171,7 +172,7 @@ class App {
 
     async loadInitialData() {
         const urlTab = utils.getUrlParam('tab');
-        if (urlTab && ['market-cn', 'market-us', 'metals'].includes(urlTab)) {
+        if (urlTab && ['market-cn', 'market-hk', 'market-us', 'metals'].includes(urlTab)) {
             this.switchTab(urlTab); // This calls refreshCurrentTab inside
         } else {
             // Default load

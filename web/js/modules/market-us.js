@@ -290,41 +290,50 @@ class USMarketController {
         const container2 = document.getElementById('us-sp500');
         if (container2) {
             container2.style.display = 'none';
-            // Update tab button if exists
-            const tabBtn = document.querySelector('.card-tab[data-target="us-gainers"]');
-            if (tabBtn) {
-                tabBtn.textContent = '三大指数';
-                const siblings = tabBtn.parentElement.children;
-                for (let i = 0; i < siblings.length; i++) {
-                    if (siblings[i] !== tabBtn) siblings[i].style.display = 'none';
-                }
-            }
         }
 
         if (!container) return;
 
         const indices = data.indices || [];
         if (indices.length === 0) {
+            container.classList.remove('heat-grid');
+            container.classList.add('list-container');
             utils.renderError('us-gainers', '暂无指数数据');
             return;
         }
 
-        const html = indices.map(index => {
-            const change = utils.formatChange(index.change_pct, 2, 'us');
+        // Switch to grid layout
+        container.classList.remove('list-container');
+        container.classList.add('heat-grid');
+        container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+
+        const html = indices.map(item => {
+            const changeVal = item.change_pct;
+            // US Colors: Green Up, Red Down (Handled by styles.css logic via classes? 
+            // text-up-us is green, text-down-us is red.
+            // But wait, CN/HK uses text-up (Red), text-down (Green).
+            // US Market requires specific color logic.
+            // utils.formatChange uses 'us' param to switch colors.
+            // But here I am constructing manually.
+            const changeClass = changeVal > 0 ? 'text-up-us' : changeVal < 0 ? 'text-down-us' : '';
+            const sign = changeVal > 0 ? '+' : '';
+
+            // Should verify if change_amount exists, if not calculate or hide
+            const changeAmt = item.change_amount != null ? item.change_amount : (item.price * item.change_pct / 100);
+
             return `
-                <div class="list-item">
-                    <div class="item-main">
-                        <span class="item-title">${index.name}</span>
-                        <span class="item-sub">${index.code}</span>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="item-value">${Number(index.price).toFixed(2)}</div>
-                        <div class="item-change ${change.class}">${change.text}</div>
+                <div class="index-item">
+                    <div class="index-name">${item.name}</div>
+                    <div class="index-price ${changeClass}">${utils.formatNumber(item.price)}</div>
+                    <div class="index-change ${changeClass}">
+                        ${sign}${utils.formatNumber(changeAmt)} 
+                        (${sign}${utils.formatPercentage(changeVal)})
                     </div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
+        container.classList.remove('loading');
     }
 }

@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 from ..modules.metals import GoldSilverAnalysis, MetalSpotPrice, GoldFearGreedIndex
 
-router = APIRouter(prefix="/metals", tags=["有色金属"])
+router = APIRouter(tags=["有色金属"])
 
 
 @router.get("/fear-greed", summary="获取黄金恐慌贪婪指数")

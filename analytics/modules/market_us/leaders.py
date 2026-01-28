@@ -47,12 +47,14 @@ class USMarketLeaders:
                             logger.warning(f"⚠️ 指数 {item['name']} 价格数据无效，跳过")
                             continue
                         
-                        change_pct = (current_price - prev_close) / prev_close * 100
+                        change_amount = current_price - prev_close
+                        change_pct = change_amount / prev_close * 100
                             
                         indices_data.append({
                             "name": item["name"],
                             "code": item["code"],
                             "price": current_price,
+                            "change_amount": change_amount,
                             "change_pct": change_pct
                         })
                     else:
@@ -63,6 +65,30 @@ class USMarketLeaders:
                     logger.warning(f"⚠️ 获取指数 {item['name']} 失败: {e}")
                     # 跳过失败的指数，不填充假数据
                     continue
+
+            # 添加中概股 (使用 PGJ ETF 作为代理 - Invesco Golden Dragon China ETF)
+            try:
+                # 使用 stock_us_daily (Sina源) 获取 PGJ 数据，避开 EM 接口屏蔽
+                df_cne = akshare_call_with_retry(ak.stock_us_daily, symbol='PGJ', adjust="qfq")
+                if not df_cne.empty and len(df_cne) >= 2:
+                    latest = df_cne.iloc[-1]
+                    prev = df_cne.iloc[-2]
+                    
+                    current_price = safe_float(latest["close"])
+                    prev_close = safe_float(prev["close"])
+                    
+                    if current_price and prev_close:
+                        change_amount = current_price - prev_close
+                        change_pct = change_amount / prev_close * 100
+                        indices_data.append({
+                            "name": "中概股",
+                            "code": "PGJ",
+                            "price": current_price,
+                            "change_amount": change_amount,
+                            "change_pct": change_pct
+                        })
+            except Exception as e:
+                 logger.warning(f"⚠️ 获取中概股数据失败: {e}")
 
             # 如果全部失败，返回错误而非假数据
             if not indices_data:

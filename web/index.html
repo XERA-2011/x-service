@@ -37,6 +37,9 @@
             <button class="tab-btn active" data-tab="market-cn">
                 <i data-lucide="trending-up" width="16"></i> 中国市场
             </button>
+            <button class="tab-btn" data-tab="market-hk">
+                <i data-lucide="globe" width="16"></i> 中国香港
+            </button>
             <button class="tab-btn" data-tab="market-us">
                 <i data-lucide="dollar-sign" width="16"></i> 美国市场
             </button>
@@ -158,6 +161,48 @@
 
 
 
+            </div>
+        </section>
+
+
+        <!-- HK Market -->
+        <section class="tab-content" id="market-hk">
+            <div class="section-header">
+                <h2 class="section-title">中国香港</h2>
+                <button class="refresh-btn" onclick="window.app.refreshCurrentTab()" title="点击刷新"><i
+                        data-lucide="refresh-cw" width="14"></i> 刷新</button>
+            </div>
+
+            <div class="grid">
+                <!-- Major Indices -->
+                <div class="card hero">
+                    <div class="card-header">
+                        <div class="card-title">大盘指数</div>
+                    </div>
+                    <div id="hk-indices" class="heat-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Gainers -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">领涨板块 (代理)</div>
+                    </div>
+                    <div id="hk-gainers" class="list-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Losers -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">领跌板块 (代理)</div>
+                    </div>
+                    <div id="hk-losers" class="list-container">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -315,6 +360,7 @@
     <script src="js/charts.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/modules/market-cn.js"></script>
+    <script src="js/modules/market-hk.js"></script>
     <script src="js/modules/market-us.js"></script>
     <script src="js/modules/metals.js"></script>
     <script src="js/main.js"></script>
