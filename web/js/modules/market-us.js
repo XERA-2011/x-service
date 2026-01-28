@@ -64,63 +64,17 @@ class USMarketController {
         }
     }
 
-    renderUSFearGreed(data, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        if (!data || data.error) {
-            utils.renderError(containerId, data && data.error ? data.error : '暂无数据');
-            return;
-        }
-
-        const score = data.current_value ?? data.score;
-        const level = data.current_level || data.level;
-
-        // 如果没有分数数据，显示错误而非默认值
-        if (score == null) {
-            utils.renderError(containerId, '恐慌指数数据不可用');
-            return;
-        }
-
-        let contentHtml = `
-            <div class="fg-gauge" id="${containerId}-gauge"></div>
-            <div class="fg-info">
-                <div class="fg-score class-${utils.getScoreClass(score)}">${score}</div>
-                <div class="fg-level">${level}</div>
-        `;
-
-        if (indicators) {
-            contentHtml += `<div class="fg-desc" style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;">`;
-            for (const [key, val] of Object.entries(indicators)) {
-                contentHtml += `
-                    <span class="badge" title="${this.getIndicatorName(key)}">
-                       ${Math.round(val.score)}
-                    </span>
-                 `;
-            }
-            contentHtml += `</div>`;
-        } else {
-            contentHtml += `
-                <div class="fg-desc">
-                    变动: ${utils.formatChange(data.change_1d || 0, 2, 'us').text}
-                </div>
-             `;
-        }
-
-        contentHtml += '</div>';
-
-        container.innerHTML = contentHtml;
-
-        if (window.charts) {
-            setTimeout(() => {
-                charts.createFearGreedGauge(`${containerId}-gauge`, { score: score, level: level });
-            }, 100);
-        }
-    }
-
+    // Helper for indicator names
     // Helper for indicator names
     getIndicatorName(key) {
         const names = {
+            // Backend keys
+            vix: 'VIX波动率',
+            sp500_momentum: '标普动量',
+            market_breadth: '市场广度',
+            safe_haven: '避险需求',
+
+            // Legacy/CNN concept keys
             junk_bond_demand: '垃圾债',
             market_volatility: '波动率',
             put_call_options: '期权',
@@ -132,10 +86,14 @@ class USMarketController {
         return names[key] || key;
     }
 
+
     renderUSFearGreed(cnnData, customData) {
         // Render CNN
         const cnnContainer = document.getElementById('us-cnn-fear');
         if (cnnContainer) {
+            // Center content
+            cnnContainer.style.justifyContent = 'center';
+
             if (!cnnData || cnnData.error) {
                 utils.renderError('us-cnn-fear', cnnData ? cnnData.error : '暂无数据');
             } else {
@@ -154,21 +112,20 @@ class USMarketController {
                 // 如果没有分数，显示错误
                 if (score == null) {
                     utils.renderError('us-cnn-fear', '恐慌指数数据不可用');
-                    return;
-                }
-
-                cnnContainer.innerHTML = `
-                    <div class="fg-gauge" id="us-cnn-gauge"></div>
-                    <div class="fg-info">
-                        <div class="fg-score class-${utils.getScoreClass(score)}">${score}</div>
-                        <div class="fg-level">${level}</div>
-                        <div class="fg-desc">变动: ${utils.formatChange(change).text}</div>
-                    </div>
-                `;
-                if (window.charts) {
-                    setTimeout(() => {
-                        charts.createFearGreedGauge('us-cnn-gauge', { score, level });
-                    }, 100);
+                } else {
+                    cnnContainer.innerHTML = `
+                        <div class="fg-gauge" id="us-cnn-gauge"></div>
+                        <div class="fg-info" style="flex: 0 1 auto;">
+    
+                            <div class="fg-level">${level}</div>
+                            <div class="fg-desc">变动: ${utils.formatChange(change).text}</div>
+                        </div>
+                    `;
+                    if (window.charts) {
+                        setTimeout(() => {
+                            charts.createFearGreedGauge('us-cnn-gauge', { score, level });
+                        }, 100);
+                    }
                 }
             }
         }
@@ -176,6 +133,9 @@ class USMarketController {
         // Render Custom
         const customContainer = document.getElementById('us-custom-fear');
         if (customContainer) {
+            // Center content
+            customContainer.style.justifyContent = 'center';
+
             if (!customData || customData.error) {
                 utils.renderError('us-custom-fear', customData ? customData.error : '暂无数据');
             } else {
@@ -188,25 +148,42 @@ class USMarketController {
 
                 const score = customData.score;
                 const level = customData.level || '未知';
+                const indicators = customData.indicators;
 
                 // 如果没有分数，显示错误
                 if (score == null) {
                     utils.renderError('us-custom-fear', '恐慌指数数据不可用');
-                    return;
-                }
+                } else {
+                    let contentHtml = `
+                        <div class="fg-gauge" id="us-custom-gauge"></div>
+                        <div class="fg-info" style="flex: 0 1 auto;">
+    
+                            <div class="fg-level">${level}</div>
+                            <div class="fg-desc">${customData.description || ''}</div>
+                    `;
 
-                customContainer.innerHTML = `
-                    <div class="fg-gauge" id="us-custom-gauge"></div>
-                    <div class="fg-info">
-                        <div class="fg-score class-${utils.getScoreClass(score)}">${score}</div>
-                        <div class="fg-level">${level}</div>
-                        <div class="fg-desc">${customData.description || ''}</div>
-                    </div>
-                `;
-                if (window.charts) {
-                    setTimeout(() => {
-                        charts.createFearGreedGauge('us-custom-gauge', customData);
-                    }, 100);
+                    // Add indicators if available (using unified 'heat-tag' style)
+                    if (indicators) {
+                        contentHtml += `<div class="fg-desc" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px;">`;
+                        for (const [key, val] of Object.entries(indicators)) {
+                            if (typeof val !== 'object' || !val.score) continue;
+                            contentHtml += `
+                                <span class="heat-tag heat-gray" title="${this.getIndicatorName(key)}: ${Math.round(val.score)}">
+                                   ${this.getIndicatorName(key)}
+                                </span>
+                             `;
+                        }
+                        contentHtml += `</div>`;
+                    }
+
+                    contentHtml += '</div>'; // Close fg-info
+
+                    customContainer.innerHTML = contentHtml;
+                    if (window.charts) {
+                        setTimeout(() => {
+                            charts.createFearGreedGauge('us-custom-gauge', customData);
+                        }, 100);
+                    }
                 }
             }
         }

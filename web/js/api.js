@@ -215,6 +215,10 @@ class API {
         return this.request('/market-hk/indices');
     }
 
+    async getHKFearGreed() {
+        return this.request('/market-hk/fear-greed');
+    }
+
     async getCNIndices() {
         return this.request('/market-cn/indices');
     }

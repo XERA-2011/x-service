@@ -32,15 +32,19 @@ After reading, briefly state the 2-3 most critical constraints from the guidelin
 
 Now proceed with the user's actual coding request, ensuring all changes adhere to the loaded guidelines.
 
-## 5. Resilience Check (Self-Correction)
+## 5. Final Cleanup & Quality Check
+ 
+Before finishing, you **MUST** perform these final actions:
 
-Before finishing, ask yourself:
-- "If the API fails or times out, will the UI get stuck in 'Loading...'?"
-- "If one part of `Promise.all` fails, will the rest still render?"
-- "Are error messages aligned correctly (centered)?"
-- "Have I cleaned up all temporary test files and debug scripts?"
+1.  **Delete Temporary Files**: Run `rm` to remove any `test_*.py`, `temp_*`, or debug scripts you created.
+    -   *Pass*: "I have deleted `test_hk_api.py`."
+    -   *Fail*: Leaving files in the root directory.
 
-If the answer is NO, apply fixes immediately.
+2.  **Resilience Review**:
+    -   "If the API fails, does the UI show an error?"
+    -   "Are error messages centered?"
+
+3.  **Self-Correction**: If any check fails, fix it immediately.
 
 ---
 

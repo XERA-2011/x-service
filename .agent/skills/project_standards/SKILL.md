@@ -179,6 +179,7 @@ element.textContent = price != null ? formatNumber(price) : '--';
 - [ ] Mobile layout tested (Chrome DevTools)
 - [ ] Type hints present (Python) / JSDoc comments (JavaScript)
 - [ ] No Python 3.10+ syntax (Docker uses 3.9)
+- [ ] Clean up temporary files (e.g., `test_*.py`, `debug.json`)
 
 ### Before Merging
 - [ ] Tested on real data source (not cached/stale)

@@ -315,7 +315,8 @@ body {
     width: 140px;
     height: 140px;
     min-height: 140px;
-    margin: 0 auto 8px auto;
+    margin: 0 auto -40px auto;
+    /* Negative margin to pull text up */
     position: relative;
     flex-shrink: 0;
 }
@@ -328,10 +329,11 @@ body {
 }
 
 .fg-level {
-    font-size: 14px;
+    font-size: 28px;
     font-weight: 700;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    /* removed margin-top */
 }
 
 .fg-desc {
@@ -502,19 +504,7 @@ footer {
 }
 
 @media (min-width: 768px) {
-    .fg-container {
-        flex-direction: row;
-        text-align: left;
-        gap: 24px;
-    }
 
-    .fg-gauge {
-        margin-bottom: 0;
-    }
-
-    .fg-info {
-        flex: 1;
-    }
 
     .heat-grid {
         grid-template-columns: repeat(2, 1fr);

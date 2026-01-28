@@ -2,27 +2,16 @@ class MetalsController {
     async loadData() {
         console.log('📊 加载有色金属数据...');
 
-        try {
-            // Load Ratio
-            const ratioData = await api.getGoldSilverRatio();
-            this.renderGoldSilver(ratioData);
+        // Use Promise.allSettled for resilience (Project Standard 2.3)
+        // This ensures one failure doesn't block other widgets
+        const promises = [
+            api.getGoldSilverRatio().then(data => this.renderGoldSilver(data)),
+            api.getMetalSpotPrices().then(data => this.renderMetalSpotPrices(data)),
+            api.getGoldFearGreed().then(data => this.renderGoldFearGreed(data)),
+            api.getSilverFearGreed().then(data => this.renderSilverFearGreed(data))
+        ];
 
-            // Load Spot Prices
-            const spotData = await api.getMetalSpotPrices();
-            this.renderMetalSpotPrices(spotData);
-
-            // Load Gold Fear Greed
-            const fearData = await api.getGoldFearGreed();
-            this.renderGoldFearGreed(fearData);
-
-            // Load Silver Fear Greed
-            const silverFearData = await api.getSilverFearGreed();
-            this.renderSilverFearGreed(silverFearData);
-
-        } catch (error) {
-            console.error('加载金属数据失败:', error);
-            utils.renderError('gold-silver-ratio', '金属数据加载失败');
-        }
+        await Promise.allSettled(promises);
     }
 
     renderGoldSilver(data) {
@@ -122,23 +111,28 @@ class MetalsController {
             infoBtn.style.display = 'flex';
         }
 
-        // Render Score
-        const score = data.score;
-        let colorClass = 'text-secondary';
-        if (score >= 75) colorClass = 'text-up'; // Greed
-        else if (score <= 25) colorClass = 'text-down'; // Fear
+        // Render Gauge + Info (Unified Style)
+        // Note: container is .fg-container, which has flex-direction: column and centered align
 
-        const html = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
-                <div style="font-size: 48px; font-weight: 700; line-height: 1; margin-bottom: 8px;" class="${colorClass}">${score}</div>
-                
-                <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">${data.level}</div>
-                <div style="font-size: 12px; color: var(--text-secondary); text-align: center; max-width: 80%;">${data.description}</div>
+        container.innerHTML = `
+            <div class="fg-gauge" id="${metal}-gauge"></div>
+            <div class="fg-info" style="flex: 0 1 auto;">
+                <div class="fg-level">${data.level}</div>
+                <div class="fg-desc">${data.description || ''}</div>
             </div>
         `;
-        container.innerHTML = html;
 
-        // Render Indicators
+        // Render Gauge Chart
+        if (window.charts) {
+            setTimeout(() => {
+                charts.createFearGreedGauge(`${metal}-gauge`, {
+                    score: data.score,
+                    level: data.level
+                });
+            }, 100);
+        }
+
+        // Render Indicators (Keep existing logic or minimal update)
         if (indicatorsContainer && data.indicators) {
             this.renderMetalIndicators(indicatorsContainer, data.indicators);
         }
