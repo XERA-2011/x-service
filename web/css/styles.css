@@ -662,3 +662,32 @@ footer {
     color: var(--text-secondary);
     font-size: 11px;
 }
+.index-item {
+    background: #fff;
+    padding: 12px;
+    text-align: center;
+}
+
+.index-name {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.index-price {
+    font-size: 20px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.index-change {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    margin: 2px 0 4px 0;
+}
+
+.index-vol {
+    font-size: 11px;
+    color: var(--text-secondary);
+}

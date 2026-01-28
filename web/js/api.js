@@ -210,6 +210,10 @@ class API {
         return this.request('/market-cn/bonds/analysis');
     }
 
+    async getCNIndices() {
+        return this.request('/market-cn/indices');
+    }
+
     // 美国市场 API
     async getUSFearGreed() {
         return this.request('/market-us/fear-greed');

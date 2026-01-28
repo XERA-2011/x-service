@@ -55,6 +55,7 @@ class Settings:
         # === 所有数据统一 2 小时逻辑 TTL ===
         # 物理 TTL = 2h × 4 = 8小时，预热间隔最长1小时，绝对安全
         "market_overview": 7200,     # 2小时
+        "market": 7200,              # 2小时
         "sector_rank": 7200,         # 2小时
         "sector_top": 7200,          # 2小时
         "sector_bottom": 7200,       # 2小时

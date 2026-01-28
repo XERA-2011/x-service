@@ -9,6 +9,7 @@ from .heat import CNMarketHeat
 from .dividend import CNDividendStrategy
 from .bonds import CNBonds
 from .lpr import LPRAnalysis
+from .indices import CNIndices
 
 __all__ = [
     "CNFearGreedIndex",
@@ -17,4 +18,5 @@ __all__ = [
     "CNDividendStrategy",
     "CNBonds",
     "LPRAnalysis",
+    "CNIndices",
 ]

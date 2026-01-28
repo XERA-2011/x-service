@@ -21,6 +21,7 @@ class CNMarketController {
 
         const promises = [
             this.loadCNFearGreed(),
+            this.loadCNIndices(),
             this.loadCNLeaders(),
             this.loadCNMarketHeat(),
             this.loadCNDividend(),
@@ -28,6 +29,48 @@ class CNMarketController {
             this.loadLPR()
         ];
         await Promise.allSettled(promises);
+    }
+
+    async loadCNIndices() {
+        try {
+            const data = await api.getCNIndices();
+            this.renderCNIndices(data);
+        } catch (error) {
+            console.error('加载大盘指数失败:', error);
+            utils.renderError('cn-indices', '大盘指数加载失败');
+        }
+    }
+
+    renderCNIndices(data) {
+        const container = document.getElementById('cn-indices');
+        if (!container) return;
+
+        if (data.error || !data.indices) {
+            utils.renderError('cn-indices', data.error || '暂无数据');
+            return;
+        }
+
+        const indices = data.indices || [];
+        const html = indices.map(item => {
+            const changeVal = item.change_pct;
+            const changeClass = changeVal > 0 ? 'text-up' : changeVal < 0 ? 'text-down' : '';
+            const sign = changeVal > 0 ? '+' : '';
+
+            return `
+                <div class="index-item">
+                    <div class="index-name">${item.name}</div>
+                    <div class="index-price ${changeClass}">${utils.formatNumber(item.price)}</div>
+                    <div class="index-change ${changeClass}">
+                        ${sign}${utils.formatNumber(item.change_amount)} 
+                        (${sign}${utils.formatPercentage(changeVal)})
+                    </div>
+                    <div class="index-vol">成交 ${utils.formatNumber(item.amount / 100000000)}亿</div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+        container.classList.remove('loading');
     }
 
     async loadLPR() {

@@ -11,6 +11,7 @@ from ..modules.market_cn import (
     CNDividendStrategy,
     CNBonds,
     LPRAnalysis,
+    CNIndices,
 )
 
 router = APIRouter(prefix="/market-cn", tags=["中国市场"])
@@ -101,4 +102,12 @@ def get_bond_analysis() -> Dict[str, Any]:
 def get_lpr_rates() -> Dict[str, Any]:
     """获取贷款市场报价利率 (LPR)"""
     return LPRAnalysis.get_lpr_rates()
+
+@router.get("/indices", summary="获取主要指数")
+def get_indices() -> Dict[str, Any]:
+    """获取上证、深证、创业板、科创50等指数"""
+    try:
+        return CNIndices.get_indices()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
