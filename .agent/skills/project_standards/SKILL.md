@@ -68,7 +68,13 @@ element.textContent = price != null ? formatNumber(price) : '--';
 ```
 
 ### Data Source Requirements
-- All financial data MUST come from verified external APIs (e.g., AkShare).
+### Data Source Requirements
+- **STRICT SOURCE POLICY**: All financial data MUST be fetched exclusively via the **AkShare** library.
+- **FORBIDDEN**: Direct web scraping, using `requests` to fetch third-party HTML/JSON endpoints directly, or reverse-engineering private APIs.
+- If AkShare does not provide specific data, you MUST:
+  1. Use an alternative available indicator from AkShare.
+  2. Implement a custom calculation based on other available AkShare data.
+  3. Mark the data as unavailable rather than scraping it yourself.
 - Estimation/interpolation logic is **FORBIDDEN** unless:
   1. Clearly labeled as "Estimated" in the UI with visual distinction.
   2. Documented with calculation methodology.

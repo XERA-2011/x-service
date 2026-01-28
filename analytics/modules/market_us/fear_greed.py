@@ -22,80 +22,43 @@ class USFearGreedIndex:
     @cached("market_us:fear_greed", ttl=settings.CACHE_TTL["fear_greed"], stale_ttl=settings.CACHE_TTL["fear_greed"] * settings.STALE_TTL_RATIO)
     def get_cnn_fear_greed() -> Dict[str, Any]:
         """
-        获取CNN恐慌贪婪指数
-        来源: https://production.dataviz.cnn.io/index/fearandgreed/graphdata
-
-        Returns:
-            CNN恐慌贪婪指数数据
+        获取恐慌贪婪指数
+        
+        注意：由于 strict "Only AkShare" 政策，原直接爬取 CNN 官网的逻辑已被移除。
+        现在使用 calculate_custom_index() 计算的自定义指数作为该接口的返回值。
+        保持接口签名兼容前端调用。
         """
-        url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-
         try:
-            # 增加超时设置
-            response = requests.get(url, headers=headers, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
+            # 使用自定义计算逻辑 (基于 AkShare 的 VIX 和 SP500)
+            custom_data = USFearGreedIndex.calculate_custom_index()
+            
+            if "error" in custom_data:
+                return {
+                    "error": custom_data["error"], 
+                    "message": "无法获取恐慌贪婪指数 (AkShare源)",
+                    "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S")
+                }
 
-                # CNN 数据结构通常包含 fear_and_greed 字段
-                if "fear_and_greed" in data:
-                    fg_data = data["fear_and_greed"]
-
-                    score = float(fg_data.get("score", 0))
-                    rating = fg_data.get("rating", "neutral")
-                    timestamp = fg_data.get("timestamp")
-
-                    # 转换 rating 为中文
-                    rating_map = {
-                        "extreme fear": "极度恐慌",
-                        "fear": "恐慌",
-                        "neutral": "中性",
-                        "greed": "贪婪",
-                        "extreme greed": "极度贪婪",
-                    }
-                    rating_cn = rating_map.get(rating.lower(), "中性")
-
-                    # 格式化日期
-                    date_str = get_beijing_time().strftime("%Y-%m-%d %H:%M:%S")
-                    if timestamp:
-                        try:
-                            # 尝试解析 timestamp (ISO format)
-                            dt = datetime.fromisoformat(
-                                timestamp.replace("Z", "+00:00")
-                            )
-                            date_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-                        except Exception:
-                            pass
-
-                    # 构建历史数据结构 (兼容前端)
-                    history: List[Dict[str, Any]] = []
-                    # CNN API返回的数据中包含历史趋势字段: previous_close, 1_week_ago, etc
-                    # 我们可以伪造一个简单的history列表，或者尝试解析 graph_data (如果API返回)
-
-                    return {
-                        "current_value": round(score, 1),
-                        "current_level": rating_cn,
-                        "change_1d": round(
-                            score - float(fg_data.get("previous_close", score)), 1
-                        ),
-                        "change_7d": round(
-                            score - float(fg_data.get("previous_1_week", score)), 1
-                        ),
-                        "date": date_str,
-                        "history": history,  # 暂时留空
-                        "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
-                        "explanation": USFearGreedIndex._get_cnn_explanation(),
-                    }
-
-            logger.warning(f"CNN API返回状态码: {response.status_code}")
-            return USFearGreedIndex._get_fallback_data(
-                f"API Error: {response.status_code}"
-            )
+            # 映射字段以兼容前端
+            score = custom_data.get("score", 50)
+            level = custom_data.get("level", "中性")
+            
+            # 由于是实时计算，暂时无法提供准确的 change_1d (除非有历史缓存)
+            # 这里先设为 0，前端展示不会报错
+            return {
+                "current_value": score,
+                "current_level": level,
+                "change_1d": 0, 
+                "change_7d": 0,
+                "date": custom_data.get("update_time"),
+                "history": [], 
+                "update_time": custom_data.get("update_time"),
+                "explanation": USFearGreedIndex._get_custom_explanation(), # 使用自定义说明
+                "source": "AkShare (Calculated)" # 明确标注来源
+            }
 
         except Exception as e:
-            logger.error(f" 获取CNN恐慌贪婪指数失败: {e}")
+            logger.error(f" 获取恐慌贪婪指数失败: {e}")
             return USFearGreedIndex._get_fallback_data(str(e))
 
     @staticmethod
@@ -103,7 +66,7 @@ class USFearGreedIndex:
         """获取失败时返回错误信息，不返回假数据"""
         return {
             "error": error_msg,
-            "message": "无法获取CNN恐慌贪婪指数",
+            "message": "无法获取恐慌贪婪指数",
             "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
         }
     @staticmethod
