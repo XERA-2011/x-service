@@ -12,20 +12,15 @@ class USMarketController {
 
     async loadUSFearGreed() {
         try {
-            // Load both datasets in parallel
-            const [cnnData, customData] = await Promise.all([
-                api.getUSFearGreed().catch(e => ({ error: 'CNN数据加载失败' })),
-                api.getUSCustomFearGreed().catch(e => ({ error: 'Custom数据加载失败' }))
-            ]);
-
-            this.renderUSFearGreed(cnnData, customData);
+            // Load only custom data (CNN direct fetch is deprecated/banned)
+            const data = await api.getUSCustomFearGreed();
+            this.renderUSFearGreed(data);
 
             if (window.lucide) lucide.createIcons();
 
         } catch (error) {
             console.error('加载美国市场恐慌指数失败:', error);
             utils.renderError('us-cnn-fear', '美国市场恐慌指数加载失败');
-            utils.renderError('us-custom-fear', '美国市场恐慌指数加载失败');
         }
     }
 
@@ -64,8 +59,6 @@ class USMarketController {
         }
     }
 
-    // Helper for indicator names
-    // Helper for indicator names
     getIndicatorName(key) {
         const names = {
             // Backend keys
@@ -86,106 +79,87 @@ class USMarketController {
         return names[key] || key;
     }
 
+    renderUSFearGreed(data) {
+        const container = document.getElementById('us-cnn-fear');
+        if (!container) return;
 
-    renderUSFearGreed(cnnData, customData) {
-        // Render CNN
-        const cnnContainer = document.getElementById('us-cnn-fear');
-        if (cnnContainer) {
-            // Center content
-            cnnContainer.style.justifyContent = 'center';
+        // Center content
+        container.style.justifyContent = 'center';
 
-            if (!cnnData || cnnData.error) {
-                utils.renderError('us-cnn-fear', cnnData ? cnnData.error : '暂无数据');
-            } else {
-                // Bind CNN Info Button
-                const infoBtn1 = document.getElementById('info-us-cnn');
-                if (infoBtn1 && cnnData.explanation) {
-                    infoBtn1.onclick = () => utils.showInfoModal('恐慌贪婪指数 (CNN)', cnnData.explanation);
-                    infoBtn1.style.display = 'flex';
-                }
+        const renderFallback = (message) => {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="margin-bottom: 12px; color: var(--text-secondary); font-size: 14px;">${message}</div>
+                    <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" class="btn-primary" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; background: var(--accent-blue); color: white; text-decoration: none; font-size: 13px;">
+                        访问 CNN 官网查看
+                        <i data-lucide="external-link" width="14"></i>
+                    </a>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        };
 
-                // Robust data extraction - 不使用默认值50
-                const score = cnnData.score ?? cnnData.current_value;
-                const level = cnnData.level || cnnData.current_level || '未知';
-                const change = cnnData.change_pct ?? cnnData.change_1d ?? 0;
-
-                // 如果没有分数，显示错误
-                if (score == null) {
-                    utils.renderError('us-cnn-fear', '恐慌指数数据不可用');
-                } else {
-                    cnnContainer.innerHTML = `
-                        <div class="fg-gauge" id="us-cnn-gauge"></div>
-                        <div class="fg-info" style="flex: 0 1 auto;">
-    
-                            <div class="fg-level">${level}</div>
-                            <div class="fg-desc">变动: ${utils.formatChange(change).text}</div>
-                        </div>
-                    `;
-                    if (window.charts) {
-                        setTimeout(() => {
-                            charts.createFearGreedGauge('us-cnn-gauge', { score, level });
-                        }, 100);
-                    }
-                }
-            }
+        if (!data || data.error) {
+            renderFallback(data ? data.error : '暂无数据');
+            return;
         }
 
-        // Render Custom
-        const customContainer = document.getElementById('us-custom-fear');
-        if (customContainer) {
-            // Center content
-            customContainer.style.justifyContent = 'center';
+        // Bind Info Button
+        const infoBtn = document.getElementById('info-us-cnn');
+        if (infoBtn && data.explanation) {
+            infoBtn.onclick = () => utils.showInfoModal('恐慌贪婪指数', data.explanation);
+            infoBtn.style.display = 'flex';
+        }
 
-            if (!customData || customData.error) {
-                utils.renderError('us-custom-fear', customData ? customData.error : '暂无数据');
-            } else {
-                // Bind Custom Info Button
-                const infoBtn2 = document.getElementById('info-us-custom');
-                if (infoBtn2 && customData.explanation) {
-                    infoBtn2.onclick = () => utils.showInfoModal('恐慌贪婪指数 (Custom)', customData.explanation);
-                    infoBtn2.style.display = 'flex';
-                }
+        const score = data.score;
+        const level = data.level || '未知';
+        const indicators = data.indicators;
 
-                const score = customData.score;
-                const level = customData.level || '未知';
-                const indicators = customData.indicators;
+        // 如果没有分数，显示Fallback
+        if (score == null) {
+            renderFallback('恐慌指数数据不可用');
+            return;
+        }
 
-                // 如果没有分数，显示错误
-                if (score == null) {
-                    utils.renderError('us-custom-fear', '恐慌指数数据不可用');
-                } else {
-                    let contentHtml = `
-                        <div class="fg-gauge" id="us-custom-gauge"></div>
-                        <div class="fg-info" style="flex: 0 1 auto;">
-    
-                            <div class="fg-level">${level}</div>
-                            <div class="fg-desc">${customData.description || ''}</div>
+        let contentHtml = `
+            <div class="fg-gauge" id="us-cnn-gauge"></div>
+            <div class="fg-info" style="flex: 0 1 auto;">
+                <div class="fg-level">${level}</div>
+                <div class="fg-desc">${data.description || ''}</div>
+        `;
+
+        // Add indicators if available (using unified 'heat-tag' style)
+        if (indicators) {
+            contentHtml += `<div class="fg-desc" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px;">`;
+            for (const [key, val] of Object.entries(indicators)) {
+                if (typeof val !== 'object' || !val.score) continue;
+                contentHtml += `
+                    <span class="heat-tag heat-gray" title="${this.getIndicatorName(key)}: ${Math.round(val.score)}">
+                        ${this.getIndicatorName(key)}
+                    </span>
                     `;
-
-                    // Add indicators if available (using unified 'heat-tag' style)
-                    if (indicators) {
-                        contentHtml += `<div class="fg-desc" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px;">`;
-                        for (const [key, val] of Object.entries(indicators)) {
-                            if (typeof val !== 'object' || !val.score) continue;
-                            contentHtml += `
-                                <span class="heat-tag heat-gray" title="${this.getIndicatorName(key)}: ${Math.round(val.score)}">
-                                   ${this.getIndicatorName(key)}
-                                </span>
-                             `;
-                        }
-                        contentHtml += `</div>`;
-                    }
-
-                    contentHtml += '</div>'; // Close fg-info
-
-                    customContainer.innerHTML = contentHtml;
-                    if (window.charts) {
-                        setTimeout(() => {
-                            charts.createFearGreedGauge('us-custom-gauge', customData);
-                        }, 100);
-                    }
-                }
             }
+            contentHtml += `</div>`;
+        }
+
+        // Add permanent CNN link
+        contentHtml += `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); width: 100%; display: flex; justify-content: center;">
+                <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); text-decoration: none; font-size: 11px; transition: color 0.2s;">
+                    View on CNN
+                    <i data-lucide="external-link" width="10"></i>
+                </a>
+            </div>
+        `;
+
+        contentHtml += '</div>'; // Close fg-info
+
+        container.innerHTML = contentHtml;
+
+        if (window.charts) {
+            setTimeout(() => {
+                charts.createFearGreedGauge('us-cnn-gauge', { score, level });
+            }, 100);
         }
     }
 

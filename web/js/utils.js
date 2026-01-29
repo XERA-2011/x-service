@@ -178,58 +178,7 @@ class Utils {
         }
     }
 
-    // 显示通知
-    static showNotification(message, type = 'info', duration = 3000) {
-        // 创建通知元素
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.textContent = message;
 
-        // 添加样式
-        Object.assign(notification.style, {
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: '500',
-            zIndex: '9999',
-            opacity: '0',
-            transform: 'translateX(100%)',
-            transition: 'all 0.3s ease-out'
-        });
-
-        // 设置背景色
-        const colors = {
-            info: '#3b82f6',
-            success: '#10b981',
-            warning: '#f59e0b',
-            error: '#ef4444'
-        };
-        notification.style.backgroundColor = colors[type] || colors.info;
-
-        // 添加到页面
-        document.body.appendChild(notification);
-
-        // 显示动画
-        setTimeout(() => {
-            notification.style.opacity = '1';
-            notification.style.transform = 'translateX(0)';
-        }, 10);
-
-        // 自动移除
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, duration);
-    }
 
     // 获取URL参数
     static getUrlParam(name) {

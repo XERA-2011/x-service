@@ -44,12 +44,12 @@ class USFearGreedIndex:
             level = custom_data.get("level", "中性")
             
             # 由于是实时计算，暂时无法提供准确的 change_1d (除非有历史缓存)
-            # 这里先设为 0，前端展示不会报错
+            # 兼容前端：如果为 None，前端应隐藏变动显示，而不是显示 0
             return {
                 "current_value": score,
                 "current_level": level,
-                "change_1d": 0, 
-                "change_7d": 0,
+                "change_1d": None, 
+                "change_7d": None,
                 "date": custom_data.get("update_time"),
                 "history": [], 
                 "update_time": custom_data.get("update_time"),
