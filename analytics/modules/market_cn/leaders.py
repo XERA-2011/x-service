@@ -116,13 +116,31 @@ class CNMarketLeaders:
                 total_companies = safe_float(row.get("上涨家数", 0)) + safe_float(
                     row.get("下跌家数", 0)
                 )
+                # 获取真实领跌股
+                leading_stock = str(row.get("领涨股票", ""))
+                leading_stock_pct = safe_float(row.get("领涨股票-涨跌幅", 0))
+                
+                # 如果是跌幅榜，且所谓的"领涨股"甚至是涨的，说明数据误导（API只在大盘跌时返回抗跌股）
+                # 我们需要找到真正的"领跌股"
+                if leading_stock_pct > 0:
+                    try:
+                        # 获取成分股，找跌幅最大的
+                        cons_df = data_provider.get_sector_constituents(str(row["板块名称"]))
+                        if not cons_df.empty and "涨跌幅" in cons_df.columns:
+                            # 找跌幅最大的（最小值）
+                            worst_stock = cons_df.nsmallest(1, "涨跌幅").iloc[0]
+                            leading_stock = str(worst_stock["名称"])
+                            leading_stock_pct = safe_float(worst_stock["涨跌幅"])
+                    except Exception as e:
+                        logger.warning(f"获取板块 {row['板块名称']} 成分股失败: {e}")
+
                 sector = {
                     "name": str(row["板块名称"]),
                     "change_pct": safe_float(row["涨跌幅"]),
                     "total_market_cap": safe_float(row.get("总市值", 0)),
                     "stock_count": int(total_companies),
-                    "leading_stock": str(row.get("领涨股票", "")),
-                    "leading_stock_pct": safe_float(row.get("领涨股票-涨跌幅", 0)),
+                    "leading_stock": leading_stock,
+                    "leading_stock_pct": leading_stock_pct,
                     "turnover": safe_float(row.get("换手率", 0)),
                     "up_count": int(safe_float(row.get("上涨家数", 0))),
                     "down_count": int(safe_float(row.get("下跌家数", 0))),

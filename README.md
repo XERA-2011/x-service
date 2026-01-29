@@ -54,3 +54,9 @@ uvicorn server:app --reload
 ## 🌐 访问地址
 - Web 仪表盘: http://localhost:8080/
 - API 文档: http://localhost:8080/docs
+
+## 🧹 常用运维命令
+```bash
+# 清空 Redis 所有缓存 (强制刷新数据)
+python -c "import redis, os; from dotenv import load_dotenv; load_dotenv('.env.local'); r = redis.from_url(os.getenv('REDIS_URL')); r.flushdb(); print('✅ Redis 缓存已清空')"
+```

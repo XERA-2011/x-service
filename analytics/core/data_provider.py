@@ -111,6 +111,23 @@ class SharedDataProvider:
         df = self._fetch_with_retry(ak.stock_board_industry_name_em)
         self._set_cached(cache_key, df)
         return df
+    
+    def get_sector_constituents(self, sector_name: str) -> pd.DataFrame:
+        """
+        获取板块成分股
+        
+        Args:
+            sector_name: 板块名称 (e.g. "贵金属")
+        """
+        cache_key = f"stock_board_industry_cons_em:{sector_name}"
+        cached = self._get_cached(cache_key)
+        if cached is not None:
+            return cached
+
+        print(f"🌐 请求板块成分股: {sector_name}...")
+        df = self._fetch_with_retry(ak.stock_board_industry_cons_em, symbol=sector_name)
+        self._set_cached(cache_key, df)
+        return df
 
     def get_index_spot(self, symbol: str = "沪深重要指数") -> pd.DataFrame:
         """
