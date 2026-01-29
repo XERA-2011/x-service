@@ -80,11 +80,13 @@ class CNMarketLeaders:
 
         except Exception as e:
             logger.error(f"获取领涨板块失败: {e}")
+            # 失败兜底：返回空结构，避免前端崩溃
             return {
-                "error": str(e),
                 "sectors": [],
                 "count": 0,
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                "market_status": "数据源维护中",
+                "explanation": "数据获取异常，请稍后再试",
             }
 
     @staticmethod
@@ -133,7 +135,7 @@ class CNMarketLeaders:
                             leading_stock = str(worst_stock["名称"])
                             leading_stock_pct = safe_float(worst_stock["涨跌幅"])
                             # 礼貌请求，避免触发频控
-                            time.sleep(0.5)
+                            time.sleep(1.5)
                     except Exception as e:
                         logger.warning(f"获取板块 {row['板块名称']} 成分股失败: {e}")
 
@@ -162,11 +164,13 @@ class CNMarketLeaders:
 
         except Exception as e:
             logger.error(f"获取领跌板块失败: {e}")
+            # 失败兜底：返回空结构，避免前端崩溃
             return {
-                "error": str(e),
                 "sectors": [],
                 "count": 0,
                 "update_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
+                "market_status": "数据源维护中",
+                "explanation": "数据获取异常，请稍后再试",
             }
 
     @staticmethod
