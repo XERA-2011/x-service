@@ -9,22 +9,16 @@
 ## 🛠️ 本地开发
 
 ```bash
-# 一键启动 (Redis + App)
+# 1. 配置环境变量 (在本地终端或 .env 文件)
+export REDIS_URL="redis://:YourStrongRedisPassword@8.129.84.229:6379/0"
+# 如果使用远程 Postgres:
+export DATABASE_URL="postgres://postgres:YourStrongPostgresPassword@8.129.84.229:5432/xanalytics"
+
+# 2. 一键启动 (Redis + App)
 docker compose up -d --build
 
-# 重启
-docker compose restart xanalytics
-
-# 清空整个 Redis 数据库
-docker exec xera-redis redis-cli FLUSHDB
-
-# 查看日志
-docker compose logs -f xanalytics
-
-# 访问
-open http://localhost:8080/          # Web 仪表盘
-open http://localhost:8080/docs      # API 文档
-
-# 停止并清空缓存
-docker compose down -v
+# 3. 本地开发直连远程
+python server.py
+# 或
+uvicorn server:app --reload
 ```

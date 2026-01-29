@@ -18,9 +18,13 @@ apply_patches()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    from analytics.core.db import init_db, close_db
+
     # 启动时
     logger.info("🚀 x-analytics 服务启动中...")
-
+    
+    # 初始化数据库
+    await init_db()
 
     # 检查 Redis 连接
     if cache.connected:
@@ -41,6 +45,7 @@ async def lifespan(app: FastAPI):
     # 关闭时
     logger.info("🛑 x-analytics 服务关闭中...")
     scheduler.shutdown(wait=False)
+    await close_db()
 
 
 # 创建 FastAPI 应用

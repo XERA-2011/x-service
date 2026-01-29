@@ -9,9 +9,17 @@ from typing import Dict, Any
 
 class Settings:
     """应用配置"""
+    
+    # Base Directory
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     # Redis 配置
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    # Database 配置
+    # 默认使用本地 SQLite，生产环境通过环境变量覆盖为 PostgreSQL
+    # e.g. postgres://user:pass@host:5432/db
+    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite://{os.path.join(BASE_DIR, 'db.sqlite3')}")
     CACHE_PREFIX = "xanalytics"
 
     # 交易时间配置 (北京时间)

@@ -35,7 +35,14 @@ Direct calls to `akshare` are **FORBIDDEN** in production code. You MUST use the
   ```
 - **Passive Mode**: In "Extreme Rate Limiting" mode, ensure code handles cache misses gracefully (return None/Loading) or triggers async separate from the user request if possible.
 
-## 4. Error Handling
+## 4. Database & ORM
+- **Tortoise ORM**: Use Tortoise ORM for all database interactions.
+- **Code First**: Define models in `analytics/models/` and let the app handle schema generation.
+- **Async Only**: All database operations must be `await`ed.
+- **Migration**: Schema changes in development (SQLite) are automatic, but production (Postgres) requires careful management.
+- **Connection**: Use `settings.DATABASE_URL` to support both SQLite (local) and Postgres (remote).
+
+## 5. Error Handling
 - **Never Crash**: API endpoints must return a valid JSON structure even on failure.
   ```python
   except Exception as e:

@@ -25,6 +25,35 @@ def get_fear_greed_index(symbol: str = "sh000001", days: int = 14) -> Dict[str, 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/fear-greed/history", summary="获取恐慌贪婪指数历史")
+async def get_fear_greed_history(days: int = 30) -> Dict[str, Any]:
+    """获取恐慌贪婪指数历史趋势 (最近30天)"""
+    try:
+        from analytics.models.sentiment import SentimentHistory
+        from datetime import date, timedelta
+        
+        start_date = date.today() - timedelta(days=days)
+        history = await SentimentHistory.filter(
+            market="CN", 
+            date__gte=start_date
+        ).order_by("date").all()
+        
+        return {
+            "status": "ok",
+            "data": [
+                {
+                    "date": h.date.isoformat(),
+                    "score": h.score,
+                    "level": h.level
+                }
+                for h in history
+            ]
+        }
+    except Exception as e:
+        # 数据库可能未初始化或查询失败，返回空列表但不报错
+        return {"status": "error", "message": str(e), "data": []}
+
+
 @router.get("/leaders/gainers", summary="获取领涨板块")
 def get_top_gainers(limit: int = 10) -> Dict[str, Any]:
     """获取领涨板块排行"""

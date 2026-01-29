@@ -395,6 +395,24 @@ def setup_default_jobs():
         cron_expr="25 9 * * 1-5",  # 工作日9:25
     )
 
+    # =========================================================================
+    # 数据库持久化任务
+    # =========================================================================
+    
+    # 1. 每日记录 (收盘后 15:30)
+    scheduler.add_cron_job(
+        job_id="db:snapshot_daily",
+        func=snapshot_daily_metrics,
+        cron_expr="30 15 * * 1-5", 
+    )
+
+    # 2. 数据清理 (每天凌晨 00:00) - 保留 30 天
+    scheduler.add_cron_job(
+        job_id="db:cleanup",
+        func=cleanup_old_data,
+        cron_expr="0 0 * * *", 
+    )
+
 
 def initial_warmup():
     """启动时立即执行一次预热"""
@@ -452,3 +470,72 @@ def initial_warmup():
         logger.error(f"❌ 初始预热过程中发生错误: {e}")
     
     logger.info("🔥 初始缓存预热结束")
+
+
+def snapshot_daily_metrics():
+    """每日市场快照（写入数据库）"""
+    import asyncio
+    
+    async def _async_snapshot():
+        try:
+            logger.info("📸 开始执行数据库快照...")
+            from analytics.modules.market_cn import CNFearGreedIndex
+            from analytics.models.sentiment import SentimentHistory
+            from datetime import date
+            
+            # 1. 记录 CN 恐慌指数
+            # 注意：这里我们重新计算一次，以确保是最新的
+            result = CNFearGreedIndex.calculate(symbol="sh000001", days=14)
+            if result and "score" in result:
+                await SentimentHistory.update_or_create(
+                    date=date.today(),
+                    market="CN",
+                    defaults={
+                        "score": result["score"],
+                        "level": result["level"]
+                    }
+                )
+                logger.info(f"✅ [DB] 已保存今日恐慌指数: {result['score']}")
+            
+        except Exception as e:
+            logger.error(f"❌ 数据库快照失败: {e}")
+
+    # 在同步环境运行异步任务
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    loop.run_until_complete(_async_snapshot())
+
+
+def cleanup_old_data():
+    """清理30天前的旧数据"""
+    import asyncio
+    from datetime import date, timedelta
+    
+    async def _async_cleanup():
+        try:
+            from analytics.models.sentiment import SentimentHistory
+            
+            cutoff_date = date.today() - timedelta(days=30)
+            deleted_count = await SentimentHistory.filter(date__lt=cutoff_date).delete()
+            
+            if deleted_count > 0:
+                logger.info(f"🧹 [DB] 已清理旧数据: {deleted_count} 条 (before {cutoff_date})")
+            else:
+                logger.info("🧹 [DB] 无需清理旧数据")
+                
+        except Exception as e:
+            logger.error(f"❌ 数据清理失败: {e}")
+
+    # 在同步环境运行异步任务
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    loop.run_until_complete(_async_cleanup())
+

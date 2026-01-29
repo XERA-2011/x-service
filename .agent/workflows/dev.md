@@ -40,7 +40,11 @@ Before finishing, you **MUST** perform these final actions:
     -   *Pass*: "I have deleted `test_hk_api.py`."
     -   *Fail*: Leaving files in the root directory.
 
-2.  **Resilience Review**:
+4.  **Database Check**:
+    -   "Did I update `analytics/models/`?" -> "If yes, is the change compatible with existing data?"
+    -   "Does the code support both `sqlite://` and `postgres://` connection strings?"
+
+5.  **Resilience Review**:
     -   "If the API fails, does the UI show an error?"
     -   "Are error messages centered?"
 
